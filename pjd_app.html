@@ -1,8 +1,12 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Grupo PJD — Sistema Financeiro</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap">
 <style>
+
 :root {
   --pjd-900: #0a2240;
   --pjd-800: #0e3060;
@@ -494,31 +498,24 @@ svg { display: block; }
   .dashboard-grid { grid-template-columns: 1fr; }
   .g4 { grid-template-columns: 1fr 1fr; }
 }
+
 </style>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Grupo PJD — Sistema Financeiro</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script>
-// Lê os dados passados via hash da URL (ex: #token=xxx)
-// O Apps Script redireciona para cá com os dados do usuário
 (function() {
   try {
     const hash = window.location.hash.substring(1);
     if (hash) {
-      const params = new URLSearchParams(hash);
-      const data = params.get('d');
-      if (data) {
-        const decoded = JSON.parse(atob(data));
-        window.USUARIO    = decoded.usuario || {};
-        window.SB_URL     = decoded.sbUrl   || '';
-        window.SB_KEY     = decoded.sbKey   || '';
-        window.SCRIPT_URL = decoded.scriptUrl || '';
+      const p = new URLSearchParams(hash);
+      const d = p.get('d');
+      if (d) {
+        const dec = JSON.parse(atob(d));
+        window.USUARIO    = dec.usuario    || {};
+        window.SB_URL     = dec.sbUrl      || '';
+        window.SB_KEY     = dec.sbKey      || '';
+        window.SCRIPT_URL = dec.scriptUrl  || '';
       }
     }
-  } catch(e) {
-    console.error('Erro ao ler params:', e);
-  }
+  } catch(e) { console.error(e); }
   window.USUARIO    = window.USUARIO    || {};
   window.SB_URL     = window.SB_URL     || '';
   window.SB_KEY     = window.SB_KEY     || '';
@@ -1161,18 +1158,17 @@ svg { display: block; }
           </div>
           <div class="field">
             <label>Forma de Pagamento</label>
-            <select>
+            <select id="formaPgtoSel" onchange="atualizarCamposPagamento(this.value)">
               <option value="">Selecione...</option>
-              <option>Boleto Bancário</option>
-              <option>PIX</option>
-              <option>Transferência</option>
-              <option>TED/DOC</option>
-              <option>Débito em Conta</option>
-              <option>Débito Automático</option>
-              <option>Cartão de Crédito</option>
-              <option>Cartão de Débito</option>
-              <option>Dinheiro</option>
-              <option>Cheque</option>
+              <option value="Boleto Bancário">Boleto Bancário</option>
+              <option value="PIX">PIX</option>
+              <option value="Transferência">Transferência (TED/DOC)</option>
+              <option value="Débito em Conta">Débito em Conta</option>
+              <option value="Débito Automático">Débito Automático</option>
+              <option value="Cartão de Crédito">Cartão de Crédito</option>
+              <option value="Cartão de Débito">Cartão de Débito</option>
+              <option value="Dinheiro">Dinheiro</option>
+              <option value="Cheque">Cheque</option>
             </select>
           </div>
         </div>
@@ -1182,6 +1178,9 @@ svg { display: block; }
             <div class="field"><label>Nome do Beneficiário <span class="req">*</span></label><input type="text" placeholder="Razão Social ou Nome"></div>
           </div>
         </div>
+
+        <!-- Campos dinâmicos por forma de pagamento -->
+        <div id="camposPagamento" style="display:none;margin-top:16px"></div>
       </div>
     </div>
 
@@ -1246,28 +1245,67 @@ svg { display: block; }
         </div>
       </div>
       <div class="form-card-body">
-        <div class="form-grid g2" style="margin-bottom:20px">
+        <div class="form-grid g2" style="margin-bottom:16px">
           <div class="field">
             <label>Rateio de Despesas</label>
-            <select id="rateioSel" onchange="gerarRateio()">
-              <option value="1">NÃO — 1 conta</option>
-              <option value="2">SIM — 2 contas</option>
-              <option value="3">SIM — 3 contas</option>
-              <option value="4">SIM — 4 contas</option>
+            <select id="rateioSimNao" onchange="toggleRateio(this.value)">
+              <option value="NAO">NÃO</option>
+              <option value="SIM">SIM</option>
             </select>
           </div>
           <div class="field">
             <label>Título Parcelado</label>
-            <select id="parcelasSel" onchange="gerarParcelas()">
-              <option value="1">NÃO — Pagamento único</option>
-              <option value="2">SIM — 2 parcelas</option>
-              <option value="3">SIM — 3 parcelas</option>
-              <option value="4">SIM — 4 parcelas</option>
-              <option value="6">SIM — 6 parcelas</option>
-              <option value="12">SIM — 12 parcelas</option>
+            <select id="parceladoSimNao" onchange="toggleParcelado(this.value)">
+              <option value="NAO">NÃO</option>
+              <option value="SIM">SIM</option>
             </select>
           </div>
         </div>
+
+        <!-- Quantidade de contas para rateio -->
+        <div id="divQtdRateio" style="display:none;margin-bottom:16px">
+          <div class="field" style="max-width:300px">
+            <label>Quantidade de contas para rateio</label>
+            <select id="rateioSel" onchange="gerarRateio()">
+              <option value="">Selecione...</option>
+              <option value="2">2 contas</option>
+              <option value="3">3 contas</option>
+              <option value="4">4 contas</option>
+              <option value="5">5 contas</option>
+              <option value="6">6 contas</option>
+              <option value="7">7 contas</option>
+              <option value="8">8 contas</option>
+              <option value="9">9 contas</option>
+              <option value="10">10 contas</option>
+              <option value="11">11 contas</option>
+              <option value="12">12 contas</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Quantidade de parcelas -->
+        <div id="divQtdParcelas" style="display:none;margin-bottom:16px">
+          <div class="field" style="max-width:300px">
+            <label>Quantidade de parcelas</label>
+            <select id="parcelasSel" onchange="gerarParcelas()">
+              <option value="">Selecione...</option>
+              <option value="2">2 parcelas</option>
+              <option value="3">3 parcelas</option>
+              <option value="4">4 parcelas</option>
+              <option value="5">5 parcelas</option>
+              <option value="6">6 parcelas</option>
+              <option value="7">7 parcelas</option>
+              <option value="8">8 parcelas</option>
+              <option value="9">9 parcelas</option>
+              <option value="10">10 parcelas</option>
+              <option value="11">11 parcelas</option>
+              <option value="12">12 parcelas</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Container de parcelas -->
+        <div id="parcelasContainer" style="display:none;margin-bottom:16px"></div>
 
         <div id="rateioContainer">
           <div class="rateio-item">
@@ -1565,13 +1603,16 @@ svg { display: block; }
 </div>
 <script>
 
-const USUARIO = window.USUARIO || {};
-const SB_URL = window.SB_URL || '';
-const SB_KEY = window.SB_KEY || '';
+const USUARIO    = window.USUARIO || {};
+const SB_URL     = window.SB_URL  || '';
+const SB_KEY     = window.SB_KEY  || '';
 const SCRIPT_URL = window.SCRIPT_URL || '';
 let FILIAIS = [], CCS = [], CONTAS = [], MAP_CC = {}, CP_DADOS = [], PENDENTES = [];
+
+// ── Carrega dados do Supabase ───────────────────────────────────────────────
 async function carregarDados() {
   try {
+    if (!SB_URL || !SB_KEY) return;
     const h = {'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json'};
     const [f, cc, c, fc, cp, pend] = await Promise.all([
       fetch(SB_URL+'/rest/v1/filiais?ativo=eq.true&order=nome', {headers:h}).then(r=>r.json()),
@@ -1592,37 +1633,28 @@ async function carregarDados() {
         MAP_CC[r.filial_id].push(r.cc_id);
       });
     }
-  } catch(e) {
-    console.error('Erro ao carregar dados:', e);
+  } catch(e) { console.error('Erro ao carregar dados:', e); }
+}
+
+// ── Init usuário ───────────────────────────────────────────────────────────
+function initUsuario() {
+  if (!USUARIO || !USUARIO.nome) return;
+  const nome = USUARIO.nome || 'Usuário';
+  const iniciais = nome.split(' ').map(p => p[0]).slice(0,2).join('').toUpperCase();
+  const nivel = USUARIO.nivel || '';
+  const el = (id) => document.getElementById(id);
+  if (el('userAvatar')) el('userAvatar').textContent = iniciais;
+  if (el('userName'))   el('userName').textContent   = nome;
+  if (el('userRole'))   el('userRole').textContent   = nivel + ' · ' + (USUARIO.filial_nome || 'Matriz');
+  if (el('dashSubtitle')) {
+    const hoje = new Date();
+    const dias = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+    const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+    el('dashSubtitle').textContent = dias[hoje.getDay()] + ', ' + hoje.getDate() + ' de ' + meses[hoje.getMonth()] + ' de ' + hoje.getFullYear() + ' · ' + (USUARIO.filial_nome || 'Matriz');
   }
 }
-(function() {
-  function initUsuario() {
-    if (typeof USUARIO === 'undefined' || !USUARIO.nome) return;
-    const nome = USUARIO.nome || 'Usuário';
-    const iniciais = nome.split(' ').map(p => p[0]).slice(0,2).join('').toUpperCase();
-    const nivel = USUARIO.nivel || '';
-    const elAvatar = document.getElementById('userAvatar');
-    const elNome   = document.getElementById('userName');
-    const elRole   = document.getElementById('userRole');
-    const elSubt   = document.getElementById('dashSubtitle');
-    if (elAvatar) elAvatar.textContent = iniciais;
-    if (elNome)   elNome.textContent   = nome;
-    if (elRole)   elRole.textContent   = nivel + ' · ' + (USUARIO.filial_nome || 'Matriz');
-    if (elSubt) {
-      const hoje = new Date();
-      const diasSemana = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
-      const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-      const dataFormatada = diasSemana[hoje.getDay()] + ', ' + hoje.getDate() + ' de ' + meses[hoje.getMonth()] + ' de ' + hoje.getFullYear();
-      elSubt.textContent = dataFormatada + ' · ' + (USUARIO.filial_nome || 'Matriz');
-    }
-  }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initUsuario);
-  } else {
-    initUsuario();
-  }
-})();
+
+// ── Navegação ──────────────────────────────────────────────────────────────
 const pages = ['dashboard','cp','lancamento','cr','aprovacoes','fluxo','orcamento'];
 function showPage(id, el) {
   pages.forEach(p => {
@@ -1631,22 +1663,20 @@ function showPage(id, el) {
   });
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el) el.classList.add('active');
-  else {
-    const navEl = document.querySelector(`.nav-item[data-page="${id}"]`);
-    if (navEl) navEl.classList.add('active');
-  }
   window.scrollTo(0,0);
 }
+
+// ── Cálculo valor líquido ──────────────────────────────────────────────────
 function calcLiquido() {
   const b = parseFloat(document.getElementById('vBruto')?.value || 0);
   const a = parseFloat(document.getElementById('vAcres')?.value || 0);
   const d = parseFloat(document.getElementById('vDesc')?.value  || 0);
   const liq = b + a - d;
   const el = document.getElementById('vLiquido');
-  if (el) el.value = liq > 0
-    ? 'R$ ' + liq.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})
-    : '';
+  if (el) el.value = liq > 0 ? 'R$ ' + liq.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '';
 }
+
+// ── Busca CNPJ/CPF ─────────────────────────────────────────────────────────
 let buscaTimer;
 function simularBuscaCNPJ(val) {
   clearTimeout(buscaTimer);
@@ -1655,41 +1685,31 @@ function simularBuscaCNPJ(val) {
   if (limpo.length < minLen) return;
   buscaTimer = setTimeout(() => buscarCNPJNoSupabase(limpo), 700);
 }
+
 async function buscarCNPJNoSupabase(cnpjLimpo) {
   const razaoEl = document.getElementById('razaoInput');
   razaoEl.value = '';
   razaoEl.readOnly = true;
-  razaoEl.style.background = 'var(--surf2)';
-  razaoEl.style.color = 'var(--ink3)';
-
+  razaoEl.style.cssText = 'background:var(--surf2);color:var(--ink3)';
   ['fornBuscando','fornEncontrado','cadastroForn'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
-
   document.getElementById('fornBuscando').style.display = 'block';
-
   try {
-    const url = `${SB_URL}/rest/v1/fornecedores?cnpj_cpf=eq.${encodeURIComponent(cnpjLimpo)}&limit=1`;
-    const res = await fetch(url, {
-      headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json'}
-    });
+    const url = SB_URL + '/rest/v1/fornecedores?cnpj_cpf=eq.' + encodeURIComponent(cnpjLimpo) + '&limit=1';
+    const res = await fetch(url, {headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY}});
     const dados = await res.json();
     document.getElementById('fornBuscando').style.display = 'none';
-
     if (dados && dados.length > 0) {
-      // ENCONTRADO — mostra só o nome
       const f = dados[0];
       window._fornecedorId = f.id;
       window._fornecedorNovo = false;
       razaoEl.value = f.razao_social || '';
       razaoEl.readOnly = true;
-      razaoEl.style.background = 'var(--pjd-50)';
-      razaoEl.style.color = 'var(--pjd-700)';
+      razaoEl.style.cssText = 'background:var(--pjd-50);color:var(--pjd-700);font-weight:500';
       document.getElementById('fornEncontrado').style.display = 'block';
-      document.getElementById('cadastroForn').style.display = 'none';
     } else {
-      // NÃO ENCONTRADO — abre formulário manual
       abrirCadastroManual();
     }
   } catch(err) {
@@ -1699,19 +1719,353 @@ async function buscarCNPJNoSupabase(cnpjLimpo) {
   }
 }
 
-
-
 function abrirCadastroManual() {
   const razaoEl = document.getElementById('razaoInput');
   razaoEl.readOnly = false;
-  razaoEl.style.background = '';
-  razaoEl.style.color = '';
-  razaoEl.placeholder = 'Razão Social / Nome';
+  razaoEl.style.cssText = 'border-color:var(--amber);background:var(--amber-bg)';
+  razaoEl.placeholder = 'Razão Social / Nome *';
+  razaoEl.focus();
   document.getElementById('cadastroForn').style.display = 'block';
   document.getElementById('fornEncontrado').style.display = 'none';
   window._fornecedorNovo = true;
-  toast('Fornecedor não cadastrado', 'Preencha os dados abaixo — será salvo automaticamente.', 'info');
 }
+
+// ── Forma de pagamento dinâmica ────────────────────────────────────────────
+function atualizarCamposPagamento(forma) {
+  const div = document.getElementById('camposPagamento');
+  if (!div) return;
+  if (!forma || ['Cartão de Crédito','Cartão de Débito','Dinheiro','Cheque','Débito Automático'].includes(forma)) {
+    div.style.display = 'none'; div.innerHTML = ''; return;
+  }
+  div.style.display = 'block';
+  if (forma === 'Boleto Bancário') {
+    div.innerHTML = `
+      <div class="field" style="margin-top:4px">
+        <label>Linha Digitável do Boleto</label>
+        <input type="text" id="linhaDigitavel" placeholder="Cole a linha digitável — preenche valor e vencimento automaticamente" oninput="simularBoleto(this.value)">
+        <div class="field-hint">Ao preencher, valor e vencimento são extraídos automaticamente.</div>
+      </div>`;
+  } else if (forma === 'PIX') {
+    div.innerHTML = `
+      <div class="form-grid g2" style="margin-top:4px">
+        <div class="field">
+          <label>Tipo de Chave PIX <span class="req">*</span></label>
+          <select id="tipoChavePix" onchange="atualizarPlaceholderPix(this.value)">
+            <option value="">Selecione...</option>
+            <option value="CPF">CPF</option>
+            <option value="CNPJ">CNPJ</option>
+            <option value="TELEFONE">Telefone</option>
+            <option value="EMAIL">E-mail</option>
+            <option value="ALEATORIA">Chave Aleatória</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Chave PIX <span class="req">*</span></label>
+          <input type="text" id="chavePix" placeholder="Selecione o tipo primeiro">
+        </div>
+      </div>`;
+  } else if (['Transferência','Débito em Conta'].includes(forma)) {
+    div.innerHTML = `
+      <div class="form-grid g3" style="margin-top:4px">
+        <div class="field">
+          <label>Banco <span class="req">*</span></label>
+          <input type="text" id="bancoDest" placeholder="Ex: 341 - Itaú">
+        </div>
+        <div class="field">
+          <label>Agência <span class="req">*</span></label>
+          <input type="text" id="agenciaDest" placeholder="0000">
+        </div>
+        <div class="field">
+          <label>Número da Conta <span class="req">*</span></label>
+          <input type="text" id="contaDest" placeholder="00000-0">
+        </div>
+      </div>`;
+  }
+}
+
+function atualizarPlaceholderPix(tipo) {
+  const el = document.getElementById('chavePix');
+  if (!el) return;
+  const ph = {CPF:'000.000.000-00',CNPJ:'00.000.000/0000-00',TELEFONE:'+55 (00) 00000-0000',EMAIL:'email@exemplo.com',ALEATORIA:'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'};
+  el.placeholder = ph[tipo] || 'Informe a chave PIX';
+  el.value = '';
+  el.focus();
+}
+
+// ── Rateio e Parcelamento ──────────────────────────────────────────────────
+function toggleRateio(val) {
+  const div = document.getElementById('divQtdRateio');
+  if (!div) return;
+  if (val === 'SIM') {
+    div.style.display = 'block';
+    const sel = document.getElementById('rateioSel');
+    if (sel) sel.value = '';
+    document.getElementById('rateioContainer').innerHTML = '';
+  } else {
+    div.style.display = 'none';
+    gerarRateio();
+  }
+}
+
+function toggleParcelado(val) {
+  const div = document.getElementById('divQtdParcelas');
+  const container = document.getElementById('parcelasContainer');
+  if (!div) return;
+  if (val === 'SIM') {
+    div.style.display = 'block';
+    const sel = document.getElementById('parcelasSel');
+    if (sel) sel.value = '';
+    if (container) { container.innerHTML = ''; container.style.display = 'none'; }
+  } else {
+    div.style.display = 'none';
+    if (container) { container.innerHTML = ''; container.style.display = 'none'; }
+  }
+}
+
+function gerarParcelas() {
+  const n = parseInt(document.getElementById('parcelasSel')?.value);
+  if (!n) return;
+  const container = document.getElementById('parcelasContainer');
+  container.style.display = 'block';
+  let html = '';
+  for (let i = 1; i <= n; i++) {
+    html += `<div class="rateio-item" style="margin-bottom:10px">
+      <div class="rateio-item-title"><div class="rateio-num">${i}</div>Parcela ${i}</div>
+      <div class="form-grid g2">
+        <div class="field"><label>Vencimento <span class="req">*</span></label><input type="date" name="parcela_venc_${i}"></div>
+        <div class="field"><label>Valor (R$) <span class="req">*</span></label><input type="number" step="0.01" min="0" placeholder="0,00" name="parcela_valor_${i}"></div>
+      </div>
+    </div>`;
+  }
+  container.innerHTML = html;
+}
+
+// CCs por filial
+const ccPorFilial = {
+  'Matriz /0001': ['Sedes','Corporativo','Administrativo','Transporte|Franca','Transporte|Limeira','Imóveis'],
+  'Bela Mansão /0002': ['Sedes','Corporativo','Administrativo','Café SG','Café PL','Café SF','Soja','Gado','SMB','Tia Luiza'],
+  'São Gregório /0003': ['Sedes','Corporativo','Administrativo','Café SG','Café PL','Café SF','Soja','Gado','SMB','Tia Luiza'],
+  'Palestina 1 /0004': ['Sedes','Corporativo','Administrativo','Imóveis','Café SG','Café PL','Café SF','Soja','Gado','SMB'],
+  'Santa Fé /0005': ['Sedes','Corporativo','Administrativo','Café SG','Café PL','Café SF','Soja','Gado','SMB','Tia Luiza'],
+};
+
+function atualizarCCs() {
+  const filial = document.getElementById('filialSelect')?.value;
+  const ccs = ccPorFilial[filial] || [];
+  gerarRateio(ccs);
+}
+
+function gerarRateio(ccs) {
+  const simNao = document.getElementById('rateioSimNao');
+  const n = (simNao && simNao.value === 'NAO') ? 1 : parseInt(document.getElementById('rateioSel')?.value || 1) || 1;
+  const filial = document.getElementById('filialSelect')?.value;
+  const listaCC = ccs || ccPorFilial[filial] || ['Sedes','Corporativo','Administrativo'];
+  const opsCCs = listaCC.map(cc => `<option value="${cc}">${cc}</option>`).join('');
+  const container = document.getElementById('rateioContainer');
+  if (!container) return;
+  let html = '';
+  for (let i = 1; i <= n; i++) {
+    html += `<div class="rateio-item">
+      <div class="rateio-item-title"><div class="rateio-num">${i}</div>Conta ${i}</div>
+      <div class="form-grid g3">
+        <div class="field" style="grid-column:span 2">
+          <label>Conta Financeira <span class="req">*</span></label>
+          <input type="text" list="listaContas" placeholder="Digite para buscar...">
+        </div>
+        <div class="field">
+          <label>Centro de Custo <span class="req">*</span></label>
+          <select><option value="">Selecione...</option>${opsCCs}</select>
+        </div>
+      </div>
+    </div>`;
+  }
+  container.innerHTML = html;
+}
+
+// ── Boleto ─────────────────────────────────────────────────────────────────
+let boletoTimer;
+function simularBoleto(val) {
+  clearTimeout(boletoTimer);
+  if (val.replace(/\D/g,'').length < 30) return;
+  boletoTimer = setTimeout(() => {
+    const vb = document.getElementById('vBruto');
+    if (vb) { vb.value = '0.00'; calcLiquido(); }
+    toast('Boleto processado','Informe o valor manualmente.','info');
+  }, 800);
+}
+
+// ── Beneficiário diferente ─────────────────────────────────────────────────
+function toggleBenef(v) {
+  const div = document.getElementById('divBenef');
+  if (div) div.style.display = v === 'NÃO' ? 'block' : 'none';
+}
+
+// ── Modal de aprovação ─────────────────────────────────────────────────────
+function abrirModal(id, chamado, forn, valor) {
+  document.getElementById('modalChamado').textContent = chamado;
+  document.getElementById('modalForn').textContent = forn;
+  document.getElementById('modalValor').textContent = valor.startsWith('R$') ? valor : 'R$ ' + valor;
+  const bd = document.getElementById('modalBackdrop');
+  bd.classList.add('open');
+  bd.dataset.id = id;
+  bd.dataset.chamado = chamado;
+}
+function fecharModal() { document.getElementById('modalBackdrop').classList.remove('open'); }
+function confirmarAprovacao() {
+  const bd = document.getElementById('modalBackdrop');
+  const id = bd.dataset.id, numero = bd.dataset.chamado;
+  fecharModal();
+  if (id && SCRIPT_URL) {
+    fetch(SCRIPT_URL, {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:'acao=aprovar&tipo=cp&id='+encodeURIComponent(id)+'&numero='+encodeURIComponent(numero)})
+    .then(r=>r.json()).then(d=>{
+      if (d.ok) { toast('Aprovação confirmada', d.novoStatus || 'Aprovado.','success'); setTimeout(()=>location.reload(),2000); }
+      else alert('Erro: '+d.msg);
+    });
+  } else { toast('Aprovação confirmada','Lançamento aprovado.','success'); }
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const bd = document.getElementById('modalBackdrop');
+  if (bd) bd.addEventListener('click', e => { if (e.target === e.currentTarget) fecharModal(); });
+});
+
+// ── Modal de rejeição ──────────────────────────────────────────────────────
+let _rejId = null, _rejNumero = null;
+function abrirModalRejeicao(id, numero) {
+  _rejId = id; _rejNumero = numero;
+  document.getElementById('rejNumero').textContent = numero;
+  document.getElementById('motivoRejeicao').value = '';
+  document.getElementById('modalRejeicao').classList.add('open');
+}
+function fecharModalRejeicao() { document.getElementById('modalRejeicao').classList.remove('open'); }
+function confirmarRejeicao() {
+  const motivo = document.getElementById('motivoRejeicao').value.trim();
+  if (!motivo) { document.getElementById('motivoRejeicao').style.borderColor='var(--red)'; return; }
+  fetch(SCRIPT_URL, {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:'acao=rejeitar&tipo=cp&id='+encodeURIComponent(_rejId)+'&numero='+encodeURIComponent(_rejNumero)+'&motivo='+encodeURIComponent(motivo)})
+  .then(r=>r.json()).then(d=>{
+    fecharModalRejeicao();
+    if (d.ok) { toast('Rejeitado','Solicitante notificado.','error'); setTimeout(()=>location.reload(),2000); }
+    else alert('Erro: '+d.msg);
+  });
+}
+
+// ── Pré-visualização ───────────────────────────────────────────────────────
+const DEMO_CP = {
+  'CP2026-00001': {id:'1',numero:'CP2026-00001',fornecedor_nome:'Bolsa Agronegocios Representações',tipo_documento:'NF-e',numero_nf:'85028',dt_emissao:'2026-05-20',dt_vencimento:'2026-05-27',forma_pagamento:'Boleto Bancário',valor_bruto:3998,acrescimos:0,descontos:0,valor_liquido:3998,finalidade:'Serviços agrícolas 05/2026',observacoes:'',status:'Aguard. Diretoria',criado_em:'2026-05-23T16:53:00',parcelado:false,rateio:false,cc_nome:'Café SG',conta_desc:'22310 · Consultorias - Agro'},
+  'CP2026-00002': {id:'2',numero:'CP2026-00002',fornecedor_nome:'MTG Administração e Assessoria SA',tipo_documento:'NF-e',numero_nf:'ABRIL/26',dt_emissao:'2026-05-01',dt_vencimento:'2026-05-29',forma_pagamento:'Boleto Bancário',valor_bruto:137.22,acrescimos:0,descontos:0,valor_liquido:137.22,finalidade:'Mensalidade sistema Abril/26',observacoes:'',status:'Aguard. Diretoria',criado_em:'2026-05-23T18:18:00',parcelado:false,rateio:false,cc_nome:'Administrativo',conta_desc:'21770 · Assinaturas e Mensalidades'},
+};
+function abrirPreviewDemo(numero) { const d = DEMO_CP[numero]; if (d) abrirPreview(d); }
+
+function abrirPreview(dados) {
+  document.getElementById('previewNumero').textContent = dados.numero || '';
+  document.getElementById('previewForn').textContent = dados.fornecedor_nome || '—';
+  const cor = {
+    'Aguard. Coordenação':'var(--amber)','Aguard. Diretoria':'var(--amber)',
+    'Aprovado':'var(--green)','Pago':'#0369a1','Rejeitado':'var(--red)','Rascunho':'var(--ink4)'
+  }[dados.status] || 'var(--ink3)';
+  const parcelasHtml = dados.rateio_itens ? '' : `
+    <div class="detail-section" style="margin-top:4px">
+      <div class="detail-section-title">Classificação</div>
+      <div class="detail-row"><span class="detail-label">Conta Financeira</span><span class="detail-value">${dados.conta_desc||'—'}</span></div>
+      <div class="detail-row"><span class="detail-label">Centro de Custo</span><span class="detail-value">${dados.cc_nome||'—'}</span></div>
+      <div class="detail-row"><span class="detail-label">Parcelado</span><span class="detail-value">${dados.parcelado?'Sim':'Não'}</span></div>
+      <div class="detail-row"><span class="detail-label">Rateio</span><span class="detail-value">${dados.rateio?'Sim':'Não'}</span></div>
+    </div>`;
+  document.getElementById('previewBody').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px">
+      <div><div class="detail-section">
+        <div class="detail-section-title">Documento</div>
+        <div class="detail-row"><span class="detail-label">Tipo</span><span class="detail-value">${dados.tipo_documento||'—'}</span></div>
+        <div class="detail-row"><span class="detail-label">N° NF/Doc</span><span class="detail-value mono">${dados.numero_nf||'—'}</span></div>
+        <div class="detail-row"><span class="detail-label">Emissão</span><span class="detail-value">${fmtData(dados.dt_emissao)}</span></div>
+        <div class="detail-row"><span class="detail-label">Vencimento</span><span class="detail-value" style="color:${vencCor(dados.dt_vencimento)}">${fmtData(dados.dt_vencimento)}</span></div>
+        <div class="detail-row"><span class="detail-label">Forma Pgto</span><span class="detail-value">${dados.forma_pagamento||'—'}</span></div>
+      </div></div>
+      <div><div class="detail-section">
+        <div class="detail-section-title">Valores</div>
+        <div class="detail-row"><span class="detail-label">Valor Bruto</span><span class="detail-value">${fmtMoeda(dados.valor_bruto)}</span></div>
+        <div class="detail-row"><span class="detail-label">Acréscimos</span><span class="detail-value">${fmtMoeda(dados.acrescimos)}</span></div>
+        <div class="detail-row"><span class="detail-label">Descontos</span><span class="detail-value" style="color:var(--green)">- ${fmtMoeda(dados.descontos)}</span></div>
+        <div class="detail-row" style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px">
+          <span class="detail-label" style="font-weight:600">Líquido</span>
+          <span class="detail-value" style="font-size:15px">${fmtMoeda(dados.valor_liquido)}</span>
+        </div>
+      </div></div>
+    </div>
+    ${parcelasHtml}
+    ${dados.finalidade?`<div class="detail-section" style="margin-top:4px"><div class="detail-section-title">Finalidade / Histórico</div><div style="font-size:13px;color:var(--ink2)">${dados.finalidade}</div></div>`:''}
+    ${dados.observacoes?`<div class="detail-section" style="margin-top:4px"><div class="detail-section-title">Observações</div><div style="font-size:13px;background:var(--surf2);padding:10px 12px;border-radius:8px;border:1px solid var(--border)">${dados.observacoes}</div></div>`:''}
+    ${dados.status==='Rejeitado'&&dados.motivo_rejeicao?`<div class="detail-section" style="margin-top:4px"><div class="detail-section-title" style="color:var(--red)">Motivo da Rejeição</div><div class="comment-box">${dados.motivo_rejeicao}</div></div>`:''}
+    <div style="display:flex;align-items:center;gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid var(--surf3)">
+      <span class="badge" style="background:${cor}15;color:${cor};border:1px solid ${cor}40">${dados.status}</span>
+      <span style="font-size:12px;color:var(--ink4)">Lançado em ${fmtDataHora(dados.criado_em)}</span>
+    </div>`;
+  const podeAprovar = (USUARIO.nivel==='Coordenação'&&dados.status==='Aguard. Coordenação')||(USUARIO.nivel==='Diretoria'&&dados.status==='Aguard. Diretoria')||USUARIO.nivel==='Admin';
+  document.getElementById('previewFooter').innerHTML = podeAprovar ? `
+    <button class="btn btn-ghost btn-sm" onclick="fecharPreview()">Fechar</button>
+    <button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:1px solid #fca5a5" onclick="fecharPreview();abrirModalRejeicao('${dados.id}','${dados.numero}')">Rejeitar</button>
+    <button class="btn btn-primary btn-sm" onclick="fecharPreview();abrirModal('${dados.id}','${dados.numero}','${(dados.fornecedor_nome||'').replace(/'/g,"\'")}','${fmtMoeda(dados.valor_liquido)}')">Aprovar</button>`
+    : `<button class="btn btn-ghost btn-sm" onclick="fecharPreview()">Fechar</button>`;
+  document.getElementById('modalPreview').classList.add('open');
+}
+function fecharPreview() { document.getElementById('modalPreview').classList.remove('open'); }
+
+// ── Drawer ─────────────────────────────────────────────────────────────────
+function fecharDrawer() {
+  document.getElementById('drawer').style.right = '-560px';
+  document.getElementById('drawerBackdrop').style.display = 'none';
+}
+
+// ── Solicitar Pagamento ────────────────────────────────────────────────────
+function solicitarPagamento() {
+  toast('Pagamento solicitado','Enviado para aprovação da Coordenação.','success');
+  setTimeout(() => showPage('cp'), 1800);
+}
+
+// ── Formatadores ───────────────────────────────────────────────────────────
+function fmtMoeda(v) {
+  if (!v && v !== 0) return '—';
+  return 'R$ ' + parseFloat(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function fmtData(d) {
+  if (!d) return '—';
+  return new Date(d+'T12:00:00').toLocaleDateString('pt-BR');
+}
+function fmtDataHora(d) {
+  if (!d) return '—';
+  const dt = new Date(d);
+  return dt.toLocaleDateString('pt-BR') + ' · ' + dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+}
+function vencCor(d) {
+  if (!d) return 'var(--ink3)';
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const dt = new Date(d+'T12:00:00');
+  if (dt < hoje) return 'var(--red)';
+  if (dt.getTime()===hoje.getTime()) return 'var(--amber)';
+  return 'var(--ink3)';
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+function toast(titulo, msg, tipo='info') {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+  const el = document.createElement('div');
+  const cor = tipo==='success'?'#0d9e6e':tipo==='error'?'#c53030':'#2277e0';
+  el.className = 'toast';
+  el.innerHTML = `<div class="toast-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${cor}" stroke-width="2.5">
+    ${tipo==='success'?'<polyline points="20,6 9,17 4,12"/>':`<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>`}
+    </svg></div><div class="toast-text"><div class="tt">${titulo}</div><div class="ts">${msg}</div></div>`;
+  container.appendChild(el);
+  setTimeout(()=>{el.style.opacity='0';el.style.transform='translateY(8px)';el.style.transition='.3s';setTimeout(()=>el.remove(),300);},4000);
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  initUsuario();
+  carregarDados().then(() => { if (typeof atualizarCCs==='function') atualizarCCs(); });
+});
+
 </script>
 </body>
 </html>
