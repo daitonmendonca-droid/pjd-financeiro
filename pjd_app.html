@@ -1222,26 +1222,41 @@ async function buscarCNPJNoSupabase(cnpjLimpo) {
   }
 }
 async function buscarReceitaFederal(cnpj) {
+  document.getElementById('fornBuscando').style.display = 'block';
   try {
     const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+    document.getElementById('fornBuscando').style.display = 'none';
     if (res.ok) {
       const d = await res.json();
-      document.getElementById('razaoInput').value = d.razao_social || d.nome_fantasia || '';
-      document.getElementById('cepInput').value   = (d.cep || '').replace(/\D/g,'').replace(/(\d{5})(\d{3})/, '$1-$2');
-      document.getElementById('endInput').value   = d.logradouro   || '';
-      document.getElementById('numInput').value   = d.numero       || '';
-      document.getElementById('bairInput').value  = d.bairro       || '';
-      document.getElementById('telInput').value   = d.ddd_telefone_1 ? '(' + d.ddd_telefone_1.substring(0,2) + ') ' + d.ddd_telefone_1.substring(2) : '';
-      document.getElementById('emInput').value    = d.email        || '';
-      document.getElementById('endForn').style.display    = 'block';
-      document.getElementById('cadastroForn').style.display = 'none';
-      document.getElementById('razaoInput').placeholder = 'Razão Social / Nome';
-      document.getElementById('endForn').dataset.novoFornecedor = 'true';
-      toast('CNPJ encontrado na Receita Federal', 'Novo fornecedor — dados pré-preenchidos. Será cadastrado ao salvar.', 'success');
+      const razaoEl = document.getElementById('razaoInput');
+      razaoEl.value = d.razao_social || d.nome_fantasia || '';
+      razaoEl.readOnly = false;
+      razaoEl.style.background = '';
+      razaoEl.style.color = '';
+      if (document.getElementById('cepInput'))
+        document.getElementById('cepInput').value  = (d.cep || '').replace(/\D/g,'').replace(/(\d{5})(\d{3})/, '$1-$2');
+      if (document.getElementById('endInput'))
+        document.getElementById('endInput').value  = d.logradouro || '';
+      if (document.getElementById('numInput'))
+        document.getElementById('numInput').value  = d.numero     || '';
+      if (document.getElementById('bairInput'))
+        document.getElementById('bairInput').value = d.bairro     || '';
+      if (document.getElementById('cidInput'))
+        document.getElementById('cidInput').value  = d.municipio  || '';
+      if (document.getElementById('ufInput'))
+        document.getElementById('ufInput').value   = d.uf         || '';
+      if (document.getElementById('telInput'))
+        document.getElementById('telInput').value  = d.ddd_telefone_1 ? '('+d.ddd_telefone_1.substring(0,2)+') '+d.ddd_telefone_1.substring(2) : '';
+      if (document.getElementById('emInput'))
+        document.getElementById('emInput').value   = d.email || '';
+      document.getElementById('cadastroForn').style.display = 'block';
+      window._fornecedorNovo = true;
+      toast('CNPJ encontrado na Receita Federal', 'Confirme os dados e salve para cadastrar.', 'success');
     } else {
       abrirCadastroManual();
     }
   } catch(err) {
+    document.getElementById('fornBuscando').style.display = 'none';
     abrirCadastroManual();
   }
 }
@@ -1257,7 +1272,7 @@ function abrirCadastroManual() {
   toast('Fornecedor não encontrado', 'Preencha os dados — será cadastrado automaticamente ao salvar.', 'info');
 }
 
-async function buscarCEP(val) {
+async async function buscarCEP(val) {
   const cep = val.replace(/\D/g,'');
   if (cep.length !== 8) return;
   try {
