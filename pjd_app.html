@@ -991,7 +991,7 @@
   document.head ? document.head.appendChild(s) : document.body.insertBefore(s, document.body.firstChild);
   var l = document.createElement('link');
   l.rel = 'stylesheet';
-  l.href = 'https:
+  l.href = 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap';
   document.head ? document.head.appendChild(l) : document.body.appendChild(l);
 })();
 const USUARIO = window.USUARIO || {};
@@ -1128,7 +1128,7 @@ async function buscarCNPJNoSupabase(cnpjLimpo) {
 }
 async function buscarReceitaFederal(cnpj) {
   try {
-    const res = await fetch(`https:
+    const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
     if (res.ok) {
       const d = await res.json();
       document.getElementById('razaoInput').value = d.razao_social || d.nome_fantasia || '';
