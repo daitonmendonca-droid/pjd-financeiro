@@ -1,0 +1,1539 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Grupo PJD — Sistema Financeiro</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>
+// Lê os dados passados via hash da URL (ex: #token=xxx)
+// O Apps Script redireciona para cá com os dados do usuário
+(function() {
+  try {
+    const hash = window.location.hash.substring(1);
+    if (hash) {
+      const params = new URLSearchParams(hash);
+      const data = params.get('d');
+      if (data) {
+        const decoded = JSON.parse(atob(data));
+        window.USUARIO    = decoded.usuario || {};
+        window.SB_URL     = decoded.sbUrl   || '';
+        window.SB_KEY     = decoded.sbKey   || '';
+        window.SCRIPT_URL = decoded.scriptUrl || '';
+      }
+    }
+  } catch(e) {
+    console.error('Erro ao ler params:', e);
+  }
+  window.USUARIO    = window.USUARIO    || {};
+  window.SB_URL     = window.SB_URL     || '';
+  window.SB_KEY     = window.SB_KEY     || '';
+  window.SCRIPT_URL = window.SCRIPT_URL || '';
+})();
+</script>
+</head>
+<body>
+<div id="pjd-root">
+
+<!-- Estilos e conteúdo injetados pelo script abaixo -->
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="9"/>
+        <circle cx="12" cy="12" r="5"/>
+        <circle cx="12" cy="12" r="2"/>
+        <line x1="12" y1="3" x2="12" y2="7"/>
+      </svg>
+    </div>
+    <div class="logo-text">
+      <div class="grupo">Grupo</div>
+      <div class="pjd">PJD</div>
+    </div>
+  </div>
+  <div class="topbar-center">
+    <div class="search-wrap">
+      <svg class="si" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" placeholder="Buscar por chamado, fornecedor, valor...">
+    </div>
+  </div>
+  <div class="topbar-right">
+    <button class="top-btn notif-dot" title="Notificações">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    </button>
+    <button class="top-btn" title="Ajuda">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </button>
+    <div class="user-pill">
+      <div class="user-avatar" id="userAvatar">??</div>
+      <div class="user-info">
+        <div class="name" id="userName">Carregando...</div>
+        <div class="role" id="userRole">...</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <nav class="nav-section">
+    <div class="nav-label">Visão Geral</div>
+    <a class="nav-item active" onclick="showPage('dashboard', this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+  </nav>
+  <nav class="nav-section">
+    <div class="nav-label">Financeiro</div>
+    <a class="nav-item" onclick="showPage('cp', this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+      Contas a Pagar
+    </a>
+    <a class="nav-item" onclick="showPage('lancamento', this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      Solicitar Pagamento
+    </a>
+    <a class="nav-item" onclick="showPage('cr', this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      Contas a Receber
+    </a>
+    <a class="nav-item" onclick="showPage('aprovacoes', this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,11 12,14 22,4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Aprovações
+      <span class="nav-badge">2</span>
+    </a>
+  </nav>
+  <nav class="nav-section">
+    <div class="nav-label">Análises</div>
+    <a class="nav-item" onclick="showPage('fluxo', this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg>
+      Fluxo de Caixa
+    </a>
+    <a class="nav-item" onclick="showPage('orcamento', this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Orçado × Realizado
+    </a>
+  </nav>
+  <nav class="nav-section">
+    <div class="nav-label">Cadastros</div>
+    <a class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Fornecedores
+    </a>
+    <a class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M4 9h16"/><path d="M9 21V9"/></svg>
+      Plano de Contas
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    <a class="nav-item" style="color:rgba(255,255,255,.4);font-size:12px">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+      Suporte Técnico
+    </a>
+  </div>
+</aside>
+
+<!-- MAIN CONTENT -->
+<main class="main">
+
+  <!-- ── DASHBOARD ── -->
+  <div id="page-dashboard" class="fade-in">
+    <div class="page-header">
+      <div class="breadcrumb">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </div>
+      <h1>Visão Geral</h1>
+      <div class="subtitle" id="dashSubtitle">Carregando...</div>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="metric-card fade-in stagger-1">
+        <div class="mc-icon" style="background:#e6f0fd">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a65c8" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+        </div>
+        <div class="mc-label">A Pagar — Semana</div>
+        <div class="mc-value">R$ 47.830</div>
+        <div class="mc-trend trend-dn">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23,18 13.5,8.5 8.5,13.5 1,6"/><polyline points="17,18 23,18 23,12"/></svg>
+          12% vs semana anterior
+        </div>
+        <div class="sparkline" style="margin-top:12px">
+          <div class="spark-bar" style="height:55%"></div>
+          <div class="spark-bar" style="height:70%"></div>
+          <div class="spark-bar" style="height:45%"></div>
+          <div class="spark-bar" style="height:80%"></div>
+          <div class="spark-bar" style="height:60%"></div>
+          <div class="spark-bar" style="height:90%"></div>
+          <div class="spark-bar highlight" style="height:75%"></div>
+        </div>
+      </div>
+
+      <div class="metric-card fade-in stagger-2">
+        <div class="mc-icon" style="background:#e8faf4">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0d9e6e" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <div class="mc-label">A Receber — Semana</div>
+        <div class="mc-value">R$ 268.785</div>
+        <div class="mc-trend trend-up">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23,6 13.5,15.5 8.5,10.5 1,18"/><polyline points="17,6 23,6 23,12"/></svg>
+          Aluguéis · 5 filiais
+        </div>
+        <div class="sparkline" style="margin-top:12px">
+          <div class="spark-bar" style="height:100%;background:#0d9e6e;opacity:.5"></div>
+          <div class="spark-bar" style="height:100%;background:#0d9e6e;opacity:.5"></div>
+          <div class="spark-bar" style="height:100%;background:#0d9e6e;opacity:.5"></div>
+          <div class="spark-bar" style="height:100%;background:#0d9e6e;opacity:.5"></div>
+          <div class="spark-bar" style="height:100%;background:#0d9e6e;opacity:.5"></div>
+          <div class="spark-bar" style="height:100%;background:#0d9e6e;opacity:.5"></div>
+          <div class="spark-bar" style="height:100%;background:#0d9e6e;opacity:1"></div>
+        </div>
+      </div>
+
+      <div class="metric-card fade-in stagger-3">
+        <div class="mc-icon" style="background:#fef5e0">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c47a0a" stroke-width="2"><polyline points="9,11 12,14 22,4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        <div class="mc-label">Aguardando Aprovação</div>
+        <div class="mc-value">2</div>
+        <div class="mc-trend" style="color:var(--amber)">
+          Requerem sua ação hoje
+        </div>
+        <div style="margin-top:14px">
+          <button class="btn btn-ghost btn-sm" onclick="showPage('aprovacoes', this)">Ver pendentes →</button>
+        </div>
+      </div>
+
+      <div class="metric-card fade-in stagger-4">
+        <div class="mc-icon" style="background:#e6f0fd">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a65c8" stroke-width="2"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg>
+        </div>
+        <div class="mc-label">Saldo Projetado — 13S</div>
+        <div class="mc-value" style="color:var(--green)">R$ 1,24M</div>
+        <div class="mc-trend trend-up">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23,6 13.5,15.5 8.5,10.5 1,18"/><polyline points="17,6 23,6 23,12"/></svg>
+          Fluxo positivo
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard-grid">
+      <div class="table-card fade-in">
+        <div class="table-toolbar">
+          <span class="table-title">Lançamentos Recentes</span>
+          <button class="btn btn-ghost btn-sm" onclick="showPage('cp', this)">Ver todos</button>
+          <button class="btn btn-primary btn-sm" onclick="showPage('lancamento', this)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Novo
+          </button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Chamado</th><th>Fornecedor</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="chamado-id">CP2026-00001</span></td>
+              <td><div class="supplier-name">Bolsa Agronegocios Representações</div><div class="supplier-doc">07.812.993/0001-55</div></td>
+              <td><span class="due-date due-overdue">27/05 · Vencido</span></td>
+              <td><span class="amount">R$ 3.998,00</span></td>
+              <td><span class="badge b-aprovacao">Em Aprovação</span></td>
+              <td><div class="actions-cell">
+                <button class="action-approve" title="Aprovar" onclick="abrirModal('1','CP2026-00001','Bolsa Agronegocios','R$ 3.998,00')">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>
+                </button>
+                <button class="action-reject" title="Rejeitar">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+                <button class="action-view" title="Visualizar" <button class="action-view" title="Visualizar" onclick="abrirPreviewDemo('CP2026-00001')">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div></td>
+            </tr>
+            <tr>
+              <td><span class="chamado-id">CP2026-00002</span></td>
+              <td><div class="supplier-name">MTG Administração e Assessoria SA</div><div class="supplier-doc">04.212.500/0001-22</div></td>
+              <td><span class="due-date due-today">29/05 · Hoje</span></td>
+              <td><span class="amount">R$ 137,22</span></td>
+              <td><span class="badge b-aprovacao">Em Aprovação</span></td>
+              <td><div class="actions-cell">
+                <button class="action-approve" title="Aprovar" onclick="abrirModal('2','CP2026-00002','MTG Administração','R$ 137,22')">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>
+                </button>
+                <button class="action-reject" title="Rejeitar">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+                <button class="action-view" title="Visualizar">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div></td>
+            </tr>
+            <tr>
+              <td><span class="chamado-id">CP2026-00003</span></td>
+              <td><div class="supplier-name">Copercana – Coop. dos Plantadores</div><div class="supplier-doc">46.648.052/0001-09</div></td>
+              <td><span class="due-date due-ok">02/06</span></td>
+              <td><span class="amount">R$ 12.450,00</span></td>
+              <td><span class="badge b-aprovado">Aprovado</span></td>
+              <td><div class="actions-cell">
+                <button class="action-view" title="Visualizar">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div></td>
+            </tr>
+            <tr>
+              <td><span class="chamado-id">CP2026-00004</span></td>
+              <td><div class="supplier-name">Funrural – Recolhimento Mensal</div><div class="supplier-doc">Tributo</div></td>
+              <td><span class="due-date due-ok">10/06</span></td>
+              <td><span class="amount">R$ 8.200,00</span></td>
+              <td><span class="badge b-rascunho">Rascunho</span></td>
+              <td><div class="actions-cell">
+                <button class="action-view" title="Editar">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+              </div></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="table-footer">
+          <span>Mostrando 4 de 47 lançamentos</span>
+          <div class="pagination">
+            <button class="pg-btn">‹</button>
+            <button class="pg-btn active">1</button>
+            <button class="pg-btn">2</button>
+            <button class="pg-btn">3</button>
+            <button class="pg-btn">›</button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="table-card fade-in" style="margin-bottom:20px">
+          <div class="table-toolbar" style="padding:14px 18px">
+            <span class="table-title" style="font-size:14px">Próximos Vencimentos</span>
+          </div>
+          <div style="padding:4px 16px 8px">
+            <div class="venc-item">
+              <div class="venc-dot" style="background:#f87171"></div>
+              <div class="venc-info">
+                <div class="venc-name">Bolsa Agronegocios</div>
+                <div class="venc-detail">CP · Bela Mansão</div>
+              </div>
+              <div>
+                <div class="venc-amount">R$ 3.998</div>
+                <div class="venc-date" style="color:var(--red)">Vencido</div>
+              </div>
+            </div>
+            <div class="venc-item">
+              <div class="venc-dot" style="background:#f59e0b"></div>
+              <div class="venc-info">
+                <div class="venc-name">MTG Administração</div>
+                <div class="venc-detail">CP · Matriz</div>
+              </div>
+              <div>
+                <div class="venc-amount">R$ 137</div>
+                <div class="venc-date" style="color:var(--amber)">Hoje</div>
+              </div>
+            </div>
+            <div class="venc-item">
+              <div class="venc-dot" style="background:var(--pjd-400)"></div>
+              <div class="venc-info">
+                <div class="venc-name">Copercana</div>
+                <div class="venc-detail">CP · São Gregório</div>
+              </div>
+              <div>
+                <div class="venc-amount">R$ 12.450</div>
+                <div class="venc-date">02/06</div>
+              </div>
+            </div>
+            <div class="venc-item">
+              <div class="venc-dot" style="background:var(--pjd-400)"></div>
+              <div class="venc-info">
+                <div class="venc-name">FUNRURAL</div>
+                <div class="venc-detail">CP · Agro</div>
+              </div>
+              <div>
+                <div class="venc-amount">R$ 8.200</div>
+                <div class="venc-date">10/06</div>
+              </div>
+            </div>
+            <div class="venc-item">
+              <div class="venc-dot" style="background:var(--green)"></div>
+              <div class="venc-info">
+                <div class="venc-name">Aluguel — Imóveis</div>
+                <div class="venc-detail">CR · Palestina 1</div>
+              </div>
+              <div>
+                <div class="venc-amount" style="color:var(--green)">+ R$ 268.785</div>
+                <div class="venc-date">01/06</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-card fade-in">
+          <div class="table-toolbar" style="padding:14px 18px">
+            <span class="table-title" style="font-size:14px">Filiais Ativas</span>
+          </div>
+          <div style="padding:4px 16px 12px">
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px">
+                <div>
+                  <div style="font-weight:500;color:var(--ink)">Matriz</div>
+                  <div style="font-size:11px;color:var(--ink4)">/0001-18 · SP</div>
+                </div>
+                <span class="badge b-aprovado" style="font-size:10px">Ativa</span>
+              </div>
+              <div style="height:1px;background:var(--surf3)"></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px">
+                <div><div style="font-weight:500">Bela Mansão</div><div style="font-size:11px;color:var(--ink4)">/0002-07 · MG</div></div>
+                <span class="badge b-aprovado" style="font-size:10px">Ativa</span>
+              </div>
+              <div style="height:1px;background:var(--surf3)"></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px">
+                <div><div style="font-weight:500">São Gregório</div><div style="font-size:11px;color:var(--ink4)">/0003-80 · SP</div></div>
+                <span class="badge b-aprovado" style="font-size:10px">Ativa</span>
+              </div>
+              <div style="height:1px;background:var(--surf3)"></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px">
+                <div><div style="font-weight:500">Palestina 1</div><div style="font-size:11px;color:var(--ink4)">/0004-60 · SP</div></div>
+                <span class="badge b-aprovado" style="font-size:10px">Ativa</span>
+              </div>
+              <div style="height:1px;background:var(--surf3)"></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px">
+                <div><div style="font-weight:500">Santa Fé</div><div style="font-size:11px;color:var(--ink4)">/0005-41 · SP</div></div>
+                <span class="badge b-aprovado" style="font-size:10px">Ativa</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CONTAS A PAGAR (lista) ── -->
+  <div id="page-cp" class="fade-in" style="display:none">
+    <div class="page-header">
+      <div class="breadcrumb">Financeiro · Contas a Pagar</div>
+      <h1>Contas a Pagar</h1>
+    </div>
+    <div class="table-card">
+      <div class="table-toolbar">
+        <div class="filter-tabs">
+          <button class="ftab ftab-amber active">À Fazer</button>
+          <button class="ftab">Em Andamento</button>
+          <button class="ftab ftab-green">Concluídos</button>
+          <button class="ftab ftab-red">Cancelados</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-left:auto">
+          <button class="btn btn-ghost btn-sm">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46 22,3"/></svg>
+            Filtrar
+          </button>
+          <button class="btn btn-ghost btn-sm">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Exportar CSV
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="showPage('lancamento', this)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Solicitar Pagamento
+          </button>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr><th>ID</th><th>NF</th><th>Pagador</th><th>Beneficiário</th><th>Valor</th><th>Status</th><th>Vencimento</th><th>Criado em</th><th>Ações</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="chamado-id">CP2026-00001</span></td>
+            <td style="font-family:'DM Mono',monospace;font-size:12px">85028</td>
+            <td><div class="supplier-name">PJD Agropastoril</div><div class="supplier-doc">Matriz /0001</div></td>
+            <td><div class="supplier-name">Bolsa Agronegocios Representações</div></td>
+            <td><span class="amount">R$ 3.998,00</span></td>
+            <td><span class="badge b-aprovacao">Em Aprovação</span></td>
+            <td><span class="due-date due-overdue">27/05/2026</span></td>
+            <td style="font-size:12px;color:var(--ink4)">Sex 23/05 · 16:53</td>
+            <td><div class="actions-cell">
+              <button class="action-approve" onclick="abrirModal('1','CP2026-00001','Bolsa Agronegocios','R$ 3.998,00')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg></button>
+              <button class="action-reject"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+              <button class="action-view"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+            </div></td>
+          </tr>
+          <tr>
+            <td><span class="chamado-id">CP2026-00002</span></td>
+            <td style="font-family:'DM Mono',monospace;font-size:12px">ABRIL/26</td>
+            <td><div class="supplier-name">PJD Agropastoril</div><div class="supplier-doc">Matriz /0001</div></td>
+            <td><div class="supplier-name">MTG Administração e Assessoria SA</div></td>
+            <td><span class="amount">R$ 137,22</span></td>
+            <td><span class="badge b-aprovacao">Em Aprovação</span></td>
+            <td><span class="due-date due-today">29/05/2026</span></td>
+            <td style="font-size:12px;color:var(--ink4)">Sex 23/05 · 18:18</td>
+            <td><div class="actions-cell">
+              <button class="action-approve" onclick="abrirModal('2','CP2026-00002','MTG Administração','R$ 137,22')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg></button>
+              <button class="action-reject"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+              <button class="action-view"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+            </div></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="table-footer">
+        <span>1–2 de 2 lançamentos</span>
+        <div class="pagination">
+          <button class="pg-btn active">1</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FORMULÁRIO SOLICITAR PAGAMENTO ── -->
+  <div id="page-lancamento" style="display:none" class="fade-in">
+    <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between">
+      <div>
+        <div class="breadcrumb">Financeiro · Contas a Pagar · <span style="color:var(--pjd-600)">Novo Lançamento</span></div>
+        <h1>Solicitar Pagamento</h1>
+        <div class="subtitle">Todos os campos marcados com <span style="color:var(--pjd-600)">*</span> são obrigatórios</div>
+      </div>
+      <button class="btn btn-ghost btn-sm">Salvar Rascunho</button>
+    </div>
+
+    <!-- Informações Básicas -->
+    <div class="form-card">
+      <div class="form-card-header">
+        <div class="form-card-icon" style="background:var(--pjd-100)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--pjd-600)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div>
+          <div class="form-card-title">Informações Básicas</div>
+          <div class="form-card-sub">Empresa, filial e classificação do documento</div>
+        </div>
+      </div>
+      <div class="form-card-body">
+        <div class="form-grid g3">
+          <div class="field">
+            <label>Filial <span class="req">*</span></label>
+            <select id="filialSelect" onchange="atualizarCCs()">
+              <option value="">Selecione...</option>
+              <option value="Matriz /0001" selected>Matriz /0001-18 · SP</option>
+              <option value="Bela Mansão /0002">Bela Mansão /0002-07 · MG</option>
+              <option value="São Gregório /0003">São Gregório /0003-80 · SP</option>
+              <option value="Palestina 1 /0004">Palestina 1 /0004-60 · SP</option>
+              <option value="Santa Fé /0005">Santa Fé /0005-41 · SP</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Tipo de Documento <span class="req">*</span></label>
+            <select>
+              <option value="">Selecione...</option>
+              <option>NF-e</option>
+              <option>NF Serviço c/ Retenção</option>
+              <option>NF Serviço s/ Retenção</option>
+              <option>Taxa</option>
+              <option>Demais Documentos</option>
+              <option>Tributo</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Tipo de Fornecedor <span class="req">*</span></label>
+            <select>
+              <option value="PJ">Pessoa Jurídica (PJ)</option>
+              <option value="PF">Pessoa Física (PF)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dados do Fornecedor -->
+    <div class="form-card">
+      <div class="form-card-header">
+        <div class="form-card-icon" style="background:#f3f0ff">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div>
+          <div class="form-card-title">Dados do Fornecedor</div>
+          <div class="form-card-sub">Busca automática por CNPJ ou CPF</div>
+        </div>
+      </div>
+      <div class="form-card-body">
+        <div class="form-grid g2">
+          <div class="field">
+            <label>CNPJ / CPF <span class="req">*</span></label>
+            <input type="text" id="cnpjInput" placeholder="00.000.000/0000-00" oninput="simularBuscaCNPJ(this.value)">
+          </div>
+          <div class="field">
+            <label>Razão Social / Nome <span class="req">*</span></label>
+            <input type="text" id="razaoInput" placeholder="Carregado automaticamente...">
+          </div>
+        </div>
+        <div id="endForn" style="display:none;margin-top:16px">
+          <div class="form-grid g3" style="margin-bottom:12px">
+            <div class="field"><label>CEP</label><input type="text" id="cepInput" class="campo-bloq" readonly></div>
+            <div class="field" style="grid-column:span 2"><label>Endereço</label><input type="text" id="endInput" class="campo-bloq" readonly></div>
+          </div>
+          <div class="form-grid g4">
+            <div class="field"><label>Número</label><input type="text" id="numInput" class="campo-bloq" readonly></div>
+            <div class="field"><label>Bairro</label><input type="text" id="bairInput" class="campo-bloq" readonly></div>
+            <div class="field"><label>Telefone</label><input type="text" id="telInput" class="campo-bloq" readonly></div>
+            <div class="field"><label>E-mail</label><input type="text" id="emInput" class="campo-bloq" readonly></div>
+          </div>
+          <div class="field-alert" style="margin-top:12px">Dados carregados da base. Se incorretos, atualize diretamente em Cadastros → Fornecedores.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dados de Pagamento -->
+    <div class="form-card">
+      <div class="form-card-header">
+        <div class="form-card-icon" style="background:#e8faf4">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0d9e6e" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        </div>
+        <div>
+          <div class="form-card-title">Dados de Pagamento</div>
+          <div class="form-card-sub">Beneficiário e forma de pagamento</div>
+        </div>
+      </div>
+      <div class="form-card-body">
+        <div class="form-grid g2">
+          <div class="field">
+            <label>Pagamento ao Fornecedor? <span class="req">*</span></label>
+            <select id="mesmoBenef" onchange="toggleBenef(this.value)">
+              <option value="SIM">SIM — Mesmo CNPJ/CPF</option>
+              <option value="NÃO">NÃO — Beneficiário diferente</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Forma de Pagamento</label>
+            <select>
+              <option value="">Selecione...</option>
+              <option>Boleto Bancário</option>
+              <option>PIX</option>
+              <option>Transferência</option>
+              <option>TED/DOC</option>
+              <option>Débito em Conta</option>
+              <option>Débito Automático</option>
+              <option>Cartão de Crédito</option>
+              <option>Cartão de Débito</option>
+              <option>Dinheiro</option>
+              <option>Cheque</option>
+            </select>
+          </div>
+        </div>
+        <div id="divBenef" style="display:none;margin-top:16px">
+          <div class="form-grid g2">
+            <div class="field"><label>CNPJ/CPF do Beneficiário <span class="req">*</span></label><input type="text" placeholder="CNPJ ou CPF do recebedor"></div>
+            <div class="field"><label>Nome do Beneficiário <span class="req">*</span></label><input type="text" placeholder="Razão Social ou Nome"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Documento e Valores -->
+    <div class="form-card">
+      <div class="form-card-header">
+        <div class="form-card-icon" style="background:var(--amber-bg)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <div>
+          <div class="form-card-title">Documento e Valores</div>
+          <div class="form-card-sub">Datas, número e valor do documento</div>
+        </div>
+      </div>
+      <div class="form-card-body">
+        <div class="form-grid g2" style="margin-bottom:16px">
+          <div class="field"><label>Data de Emissão <span class="req">*</span></label><input type="date"></div>
+          <div class="field"><label>Data de Vencimento <span class="req">*</span></label><input type="date"></div>
+        </div>
+        <div class="form-grid g2" style="margin-bottom:16px">
+          <div class="field"><label>N° NF / Documento</label><input type="text" placeholder="Número da nota ou documento"></div>
+          <div class="field"><label>Finalidade / Histórico <span class="req">*</span></label><input type="text" placeholder="Ex: Pagamento serviços mês 05/2026"></div>
+        </div>
+        <div class="field" style="margin-bottom:16px">
+          <label>Linha Digitável do Boleto</label>
+          <input type="text" id="linhaDigitavel" placeholder="Cole a linha digitável — preenche valor e vencimento automaticamente" oninput="simularBoleto(this.value)">
+          <div class="field-hint">Ao preencher, o valor e vencimento são extraídos automaticamente.</div>
+        </div>
+        <div class="form-grid g4">
+          <div class="field">
+            <label>Valor Bruto (R$) <span class="req">*</span></label>
+            <input type="number" id="vBruto" step="0.01" min="0" placeholder="0,00" oninput="calcLiquido()">
+          </div>
+          <div class="field">
+            <label>Acréscimos (R$)</label>
+            <input type="number" id="vAcres" step="0.01" min="0" value="0" oninput="calcLiquido()">
+            <div class="field-hint">Multa, juros, etc.</div>
+          </div>
+          <div class="field">
+            <label>Descontos (R$)</label>
+            <input type="number" id="vDesc" step="0.01" min="0" value="0" oninput="calcLiquido()">
+            <div class="field-hint">Desconto negociado</div>
+          </div>
+          <div class="field">
+            <label>Valor Líquido</label>
+            <input type="text" id="vLiquido" class="calc" readonly placeholder="Calculado...">
+            <div class="field-hint">Calculado automaticamente</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rateio e Parcelamento -->
+    <div class="form-card">
+      <div class="form-card-header">
+        <div class="form-card-icon" style="background:var(--surf3)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink3)" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        </div>
+        <div>
+          <div class="form-card-title">Rateio e Parcelamento</div>
+          <div class="form-card-sub">Contas financeiras, centros de custo e parcelas</div>
+        </div>
+      </div>
+      <div class="form-card-body">
+        <div class="form-grid g2" style="margin-bottom:20px">
+          <div class="field">
+            <label>Rateio de Despesas</label>
+            <select id="rateioSel" onchange="gerarRateio()">
+              <option value="1">NÃO — 1 conta</option>
+              <option value="2">SIM — 2 contas</option>
+              <option value="3">SIM — 3 contas</option>
+              <option value="4">SIM — 4 contas</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Título Parcelado</label>
+            <select id="parcelasSel" onchange="gerarParcelas()">
+              <option value="1">NÃO — Pagamento único</option>
+              <option value="2">SIM — 2 parcelas</option>
+              <option value="3">SIM — 3 parcelas</option>
+              <option value="4">SIM — 4 parcelas</option>
+              <option value="6">SIM — 6 parcelas</option>
+              <option value="12">SIM — 12 parcelas</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="rateioContainer">
+          <div class="rateio-item">
+            <div class="rateio-item-title">
+              <div class="rateio-num">1</div>
+              Conta 1
+            </div>
+            <div class="form-grid g3">
+              <div class="field" style="grid-column:span 2">
+                <label>Conta Financeira <span class="req">*</span></label>
+                <input type="text" list="listaContas" placeholder="Digite para buscar a conta...">
+                <datalist id="listaContas">
+                  <option value="20090 · Adubos e Fertilizantes Para Café">
+                  <option value="20570 · Combustíveis e Lubrificantes Para Maquinários">
+                  <option value="22280 · Aluguéis - Agro">
+                  <option value="22290 · Arrendamentos - Agro">
+                  <option value="22680 · Energia - Agro">
+                  <option value="21110 · Aluguéis">
+                  <option value="21400 · Combustíveis e Lubrificantes">
+                  <option value="21670 · IPTU">
+                  <option value="21680 · IPVA">
+                  <option value="20830 · INSS">
+                  <option value="20850 · FGTS">
+                  <option value="20710 · Salários e Ordenados">
+                </datalist>
+              </div>
+              <div class="field">
+                <label>Centro de Custo <span class="req">*</span></label>
+                <select id="ccSelect1">
+                  <option value="">Selecione...</option>
+                  <option>Sedes</option>
+                  <option>Corporativo</option>
+                  <option>Administrativo</option>
+                  <option>Transporte|Franca</option>
+                  <option>Transporte|Limeira</option>
+                  <option>Imóveis</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Informações Finais -->
+    <div class="form-card">
+      <div class="form-card-header">
+        <div class="form-card-icon" style="background:var(--surf3)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink3)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>
+        </div>
+        <div>
+          <div class="form-card-title">Informações Finais</div>
+          <div class="form-card-sub">Observações e anexos</div>
+        </div>
+      </div>
+      <div class="form-card-body">
+        <div class="form-grid g2" style="margin-bottom:16px">
+          <div class="field">
+            <label>Gerar Nota de Débito</label>
+            <select><option>NÃO</option><option>SIM</option></select>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:16px">
+          <label>Observações</label>
+          <textarea rows="3" placeholder="Informações adicionais sobre o pagamento..."></textarea>
+        </div>
+        <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+          <svg class="upload-icon" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <div class="upload-text">Arraste seus arquivos aqui</div>
+          <div class="upload-sub">PDF, imagens, Word, Excel · Máx. 20MB por arquivo</div>
+          <div class="upload-btn-wrap">
+            <button class="btn btn-ghost btn-sm" type="button">Selecionar arquivos</button>
+          </div>
+          <input type="file" id="fileInput" style="display:none" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx">
+        </div>
+      </div>
+      <div class="form-footer">
+        <button class="btn btn-ghost" onclick="showPage('cp', this)">Cancelar</button>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-ghost">Salvar Rascunho</button>
+          <button class="btn btn-primary" onclick="solicitarPagamento()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22,2 15,22 11,13 2,9 22,2"/></svg>
+            Solicitar Pagamento
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── OUTRAS PÁGINAS (placeholder) ── -->
+  <div id="page-cr" style="display:none" class="fade-in">
+    <div class="page-header"><h1>Contas a Receber</h1></div>
+    <div class="table-card" style="padding:60px;text-align:center;color:var(--ink4)">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 14px;color:var(--pjd-300)"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      <div style="font-size:15px;font-weight:500;color:var(--ink3);margin-bottom:6px">Contas a Receber</div>
+      <div>Módulo em construção — semana 3 do cronograma</div>
+    </div>
+  </div>
+  <div id="page-aprovacoes" style="display:none" class="fade-in">
+    <div class="page-header"><h1>Aprovações Pendentes</h1></div>
+    <div class="table-card">
+      <div class="table-toolbar"><span class="table-title">Aguardando sua aprovação — Diretoria</span></div>
+      <table>
+        <thead><tr><th>Chamado</th><th>Fornecedor</th><th>Finalidade</th><th>Vencimento</th><th>Valor</th><th>CC</th><th>Ação</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="chamado-id">CP2026-00001</span></td>
+            <td><div class="supplier-name">Bolsa Agronegocios</div></td>
+            <td>Serviços agrícolas 05/2026</td>
+            <td><span class="due-date due-overdue">27/05 · Vencido</span></td>
+            <td><span class="amount">R$ 3.998,00</span></td>
+            <td>Café SG</td>
+            <td><div class="actions-cell">
+              <button class="action-approve" onclick="abrirModal('1','CP2026-00001','Bolsa Agronegocios','R$ 3.998,00')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg></button>
+              <button class="action-reject"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </div></td>
+          </tr>
+          <tr>
+            <td><span class="chamado-id">CP2026-00002</span></td>
+            <td><div class="supplier-name">MTG Administração</div></td>
+            <td>Mensalidade sistema Abril/26</td>
+            <td><span class="due-date due-today">29/05 · Hoje</span></td>
+            <td><span class="amount">R$ 137,22</span></td>
+            <td>Administrativo</td>
+            <td><div class="actions-cell">
+              <button class="action-approve" onclick="abrirModal('2','CP2026-00002','MTG Administração','R$ 137,22')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg></button>
+              <button class="action-reject"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div id="page-fluxo" style="display:none" class="fade-in">
+    <div class="page-header"><h1>Fluxo de Caixa — 13 Semanas</h1></div>
+    <div class="table-card" style="padding:60px;text-align:center;color:var(--ink4)">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 14px;color:var(--pjd-300)"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg>
+      <div style="font-size:15px;font-weight:500;color:var(--ink3);margin-bottom:6px">Fluxo de Caixa 13 Semanas</div>
+      <div>Módulo em construção — semana 5 do cronograma · Alimentado automaticamente pelos lançamentos de CP e CR</div>
+    </div>
+  </div>
+  <div id="page-orcamento" style="display:none" class="fade-in">
+    <div class="page-header"><h1>Orçado × Realizado</h1></div>
+    <div class="table-card" style="padding:60px;text-align:center;color:var(--ink4)">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 14px;color:var(--pjd-300)"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <div style="font-size:15px;font-weight:500;color:var(--ink3);margin-bottom:6px">Orçado × Realizado</div>
+      <div>Módulo em construção — semana 6 do cronograma</div>
+    </div>
+  </div>
+
+</main>
+
+<!-- MODAL DE APROVAÇÃO -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Confirmar Aprovação</h3>
+      <button class="modal-close" onclick="fecharModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:var(--ink3);margin-bottom:16px">Você está aprovando o seguinte lançamento:</p>
+      <div style="background:var(--surf2);border-radius:9px;padding:16px;border:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+          <span style="font-size:12px;color:var(--ink4)">N° Chamado</span>
+          <span id="modalChamado" class="chamado-id" style="font-size:12px"></span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+          <span style="font-size:12px;color:var(--ink4)">Beneficiário</span>
+          <span id="modalForn" style="font-size:13px;font-weight:500"></span>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <span style="font-size:12px;color:var(--ink4)">Valor Líquido</span>
+          <span id="modalValor" style="font-size:15px;font-weight:700;color:var(--ink)"></span>
+        </div>
+      </div>
+      <div style="background:var(--amber-bg);border-radius:8px;padding:12px;margin-top:14px;font-size:12.5px;color:var(--amber)">
+        Após aprovação, o lançamento seguirá para o Responsável por Pagamentos para envio ao banco.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarAprovacao()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>
+        Confirmar Aprovação
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toastContainer"></div>
+
+
+
+
+<!-- MODAL DE PRÉ-VISUALIZAÇÃO RÁPIDA -->
+<div class="modal-backdrop" id="modalPreview" onclick="if(event.target===this)fecharPreview()">
+  <div class="modal" style="width:600px;max-height:85vh;display:flex;flex-direction:column">
+    <div class="modal-header" style="flex-shrink:0">
+      <div>
+        <span id="previewNumero" class="chamado-id" style="font-size:12px"></span>
+        <h3 style="margin-top:6px" id="previewForn"></h3>
+      </div>
+      <button class="modal-close" onclick="fecharPreview()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="previewBody" style="overflow-y:auto;padding:20px 24px;flex:1"></div>
+    <div id="previewFooter" style="padding:14px 24px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;flex-shrink:0;background:var(--surf2)"></div>
+  </div>
+</div>
+
+<!-- DRAWER DE DETALHES DO LANÇAMENTO -->
+<div id="drawerBackdrop" style="display:none;position:fixed;inset:0;z-index:180;background:rgba(10,34,64,.3);backdrop-filter:blur(2px)" onclick="fecharDrawer()"></div>
+<div id="drawer" style="
+  position:fixed;top:0;right:-560px;width:560px;height:100vh;z-index:190;
+  background:var(--surface);border-left:1px solid var(--border);
+  box-shadow:var(--shadow-lg);display:flex;flex-direction:column;
+  transition:right .3s cubic-bezier(.16,1,.3,1);overflow:hidden">
+  <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+    <div>
+      <div id="drawerNumero" style="font-family:'DM Mono',monospace;font-size:12px;color:var(--pjd-700);background:var(--pjd-100);padding:3px 8px;border-radius:5px;display:inline-block;margin-bottom:6px"></div>
+      <div style="font-size:16px;font-weight:600;color:var(--ink)">Detalhes do Lançamento</div>
+    </div>
+    <button onclick="fecharDrawer()" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink4)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div id="drawerBody" style="flex:1;overflow-y:auto;padding:24px"></div>
+  <div id="drawerFooter" style="padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;flex-shrink:0;background:var(--surf2)"></div>
+</div>
+
+<!-- MODAL DE REJEIÇÃO COM COMENTÁRIO -->
+<div class="modal-backdrop" id="modalRejeicao">
+  <div class="modal" style="width:480px">
+    <div class="modal-header">
+      <h3 style="color:var(--red)">Rejeitar Lançamento</h3>
+      <button class="modal-close" onclick="fecharModalRejeicao()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--red-bg);border-radius:8px;padding:12px 14px;margin-bottom:18px;display:flex;gap:10px;align-items:flex-start">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div style="font-size:13px;color:var(--red)">
+          O lançamento <b id="rejNumero"></b> será rejeitado e retornará para o solicitante com seu comentário para correção.
+        </div>
+      </div>
+      <div class="field">
+        <label style="color:var(--ink2)">Motivo da rejeição <span style="color:var(--red)">*</span></label>
+        <textarea id="motivoRejeicao" rows="4" placeholder="Descreva o motivo da rejeição e quais ajustes são necessários..." style="border-color:var(--border2);resize:vertical"></textarea>
+        <div class="field-hint">O solicitante receberá este comentário por e-mail e poderá corrigir e reenviar.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="fecharModalRejeicao()">Cancelar</button>
+      <button class="btn btn-danger" onclick="confirmarRejeicao()" style="background:var(--red);color:#fff">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        Confirmar Rejeição
+      </button>
+    </div>
+  </div>
+</div>
+
+
+
+</div>
+<script>
+
+
+(function() {
+  var s = document.createElement('style');
+  s.textContent = ":root {\n  --pjd-900: #0a2240;\n  --pjd-800: #0e3060;\n  --pjd-700: #1450a0;\n  --pjd-600: #1a65c8;\n  --pjd-500: #2277e0;\n  --pjd-400: #4a95f0;\n  --pjd-300: #7db8f8;\n  --pjd-100: #e6f0fd;\n  --pjd-50:  #f0f6ff;\n  --ink:     #0a1628;\n  --ink2:    #2a3a52;\n  --ink3:    #5a6a82;\n  --ink4:    #8a9ab2;\n  --surface: #ffffff;\n  --surf2:   #f5f7fb;\n  --surf3:   #eef2f8;\n  --border:  #dde3ef;\n  --border2: #c8d2e4;\n  --green:   #0d9e6e;\n  --green-bg:#e8faf4;\n  --amber:   #c47a0a;\n  --amber-bg:#fef5e0;\n  --red:     #c53030;\n  --red-bg:  #fef0f0;\n  --shadow-sm: 0 1px 3px rgba(10,34,64,.06), 0 1px 2px rgba(10,34,64,.04);\n  --shadow:    0 4px 16px rgba(10,34,64,.08), 0 1px 4px rgba(10,34,64,.06);\n  --shadow-lg: 0 12px 40px rgba(10,34,64,.12), 0 4px 12px rgba(10,34,64,.08);\n  --radius:  10px;\n  --radius-lg: 16px;\n  --sidebar-w: 240px;\n  --topbar-h:  60px;\n}\n\n*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }\n\nbody {\n  font-family: 'DM Sans', 'Segoe UI', Arial, sans-serif;\n  background: var(--surf2);\n  color: var(--ink);\n  font-size: 14px;\n  line-height: 1.5;\n  min-height: 100vh;\n  display: flex;\n  flex-direction: column;\n}\n\n/* ── TOPBAR ── */\n.topbar {\n  position: fixed; top: 0; left: 0; right: 0; z-index: 100;\n  height: var(--topbar-h);\n  background: var(--pjd-900);\n  display: flex; align-items: center;\n  padding: 0 20px 0 0;\n  border-bottom: 1px solid rgba(255,255,255,.06);\n}\n.topbar-logo {\n  width: var(--sidebar-w);\n  display: flex; align-items: center; gap: 10px;\n  padding: 0 20px;\n  border-right: 1px solid rgba(255,255,255,.08);\n  flex-shrink: 0;\n}\n.logo-mark {\n  width: 32px; height: 32px;\n  background: var(--pjd-600);\n  border-radius: 8px;\n  display: flex; align-items: center; justify-content: center;\n  flex-shrink: 0;\n}\n.logo-mark svg { width: 20px; height: 20px; }\n.logo-text { line-height: 1.15; }\n.logo-text .grupo { font-size: 9px; font-weight: 400; color: var(--pjd-300); letter-spacing: .12em; text-transform: uppercase; }\n.logo-text .pjd { font-size: 17px; font-weight: 600; color: #fff; letter-spacing: -.01em; }\n\n.topbar-center { flex: 1; display: flex; align-items: center; padding: 0 24px; }\n.search-wrap {\n  position: relative; width: 320px;\n}\n.search-wrap input {\n  width: 100%; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.1);\n  border-radius: 8px; color: #fff; font-family: inherit; font-size: 13px;\n  padding: 8px 12px 8px 36px; outline: none; transition: .2s;\n}\n.search-wrap input::placeholder { color: rgba(255,255,255,.35); }\n.search-wrap input:focus { background: rgba(255,255,255,.11); border-color: var(--pjd-400); }\n.search-wrap .si { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,.35); }\n\n.topbar-right { display: flex; align-items: center; gap: 8px; }\n.top-btn {\n  width: 36px; height: 36px; border-radius: 8px; border: none; cursor: pointer;\n  background: rgba(255,255,255,.07); color: rgba(255,255,255,.7);\n  display: flex; align-items: center; justify-content: center;\n  transition: .15s;\n}\n.top-btn:hover { background: rgba(255,255,255,.13); color: #fff; }\n.notif-dot { position: relative; }\n.notif-dot::after {\n  content:''; position: absolute; top: 7px; right: 7px;\n  width: 7px; height: 7px; border-radius: 50%; background: #f87171;\n  border: 2px solid var(--pjd-900);\n}\n.user-pill {\n  display: flex; align-items: center; gap: 9px;\n  background: rgba(255,255,255,.07); border-radius: 8px;\n  padding: 5px 12px 5px 6px; cursor: pointer; border: 1px solid rgba(255,255,255,.08);\n  transition: .15s; margin-left: 4px;\n}\n.user-pill:hover { background: rgba(255,255,255,.12); }\n.user-avatar {\n  width: 28px; height: 28px; border-radius: 6px;\n  background: var(--pjd-600); color: #fff;\n  font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center;\n}\n.user-info .name { font-size: 12px; font-weight: 500; color: #fff; }\n.user-info .role { font-size: 10px; color: var(--pjd-300); }\n\n/* ── SIDEBAR ── */\n.sidebar {\n  position: fixed; left: 0; top: var(--topbar-h); bottom: 0; z-index: 90;\n  width: var(--sidebar-w);\n  background: var(--pjd-900);\n  display: flex; flex-direction: column;\n  border-right: 1px solid rgba(255,255,255,.06);\n  overflow-y: auto;\n}\n.nav-section { padding: 20px 12px 8px; }\n.nav-label {\n  font-size: 9.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;\n  color: rgba(255,255,255,.28); padding: 0 8px; margin-bottom: 6px;\n}\n.nav-item {\n  display: flex; align-items: center; gap: 10px;\n  padding: 9px 10px; border-radius: 8px; cursor: pointer;\n  color: rgba(255,255,255,.55); font-size: 13px; font-weight: 400;\n  transition: .15s; text-decoration: none; position: relative;\n}\n.nav-item:hover { background: rgba(255,255,255,.06); color: rgba(255,255,255,.85); }\n.nav-item.active {\n  background: rgba(34,119,224,.2); color: #fff;\n  border: 1px solid rgba(34,119,224,.25);\n}\n.nav-item.active .nav-icon { color: var(--pjd-400); }\n.nav-icon { width: 16px; height: 16px; flex-shrink: 0; opacity: .7; }\n.nav-item.active .nav-icon { opacity: 1; }\n.nav-badge {\n  margin-left: auto; background: var(--pjd-600); color: #fff;\n  font-size: 10px; font-weight: 600; border-radius: 20px; padding: 1px 6px; min-width: 18px; text-align: center;\n}\n.sidebar-footer {\n  margin-top: auto; padding: 12px; border-top: 1px solid rgba(255,255,255,.06);\n}\n\n/* ── MAIN ── */\n.main {\n  margin-left: var(--sidebar-w);\n  margin-top: var(--topbar-h);\n  padding: 28px;\n  flex: 1;\n}\n\n/* ── PAGE HEADER ── */\n.page-header { margin-bottom: 24px; }\n.page-header .breadcrumb {\n  font-size: 12px; color: var(--ink4); margin-bottom: 6px; display: flex; align-items: center; gap: 6px;\n}\n.page-header h1 { font-size: 22px; font-weight: 600; color: var(--ink); letter-spacing: -.02em; }\n.page-header .subtitle { font-size: 13px; color: var(--ink3); margin-top: 3px; }\n\n/* ── CARDS MÉTRICA ── */\n.metrics-grid {\n  display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;\n}\n.metric-card {\n  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);\n  padding: 20px; position: relative; overflow: hidden;\n  box-shadow: var(--shadow-sm); transition: box-shadow .2s, transform .2s;\n}\n.metric-card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }\n.metric-card .mc-label { font-size: 11.5px; font-weight: 500; color: var(--ink3); letter-spacing: .03em; text-transform: uppercase; }\n.metric-card .mc-value { font-size: 26px; font-weight: 600; color: var(--ink); margin: 8px 0 4px; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }\n.metric-card .mc-sub { font-size: 12px; color: var(--ink4); }\n.metric-card .mc-icon {\n  position: absolute; right: 18px; top: 18px; width: 36px; height: 36px; border-radius: 9px;\n  display: flex; align-items: center; justify-content: center;\n}\n.metric-card .mc-trend { font-size: 11.5px; font-weight: 500; margin-top: 6px; display: flex; align-items: center; gap: 4px; }\n.trend-up { color: var(--green); }\n.trend-dn { color: var(--red); }\n\n/* ── TABELA ── */\n.table-card {\n  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);\n  box-shadow: var(--shadow-sm); overflow: hidden; margin-bottom: 20px;\n}\n.table-toolbar {\n  padding: 16px 20px; border-bottom: 1px solid var(--border);\n  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;\n}\n.table-title { font-size: 15px; font-weight: 600; color: var(--ink); flex: 1; }\n.filter-tabs { display: flex; gap: 4px; }\n.ftab {\n  padding: 6px 14px; border-radius: 7px; font-size: 12.5px; font-weight: 500; cursor: pointer;\n  border: 1px solid transparent; transition: .15s; background: none; color: var(--ink3);\n}\n.ftab:hover { background: var(--surf3); color: var(--ink); }\n.ftab.active { background: var(--pjd-100); color: var(--pjd-700); border-color: var(--pjd-300); }\n.ftab-amber.active { background: var(--amber-bg); color: var(--amber); border-color: #f3c96e; }\n.ftab-green.active { background: var(--green-bg); color: var(--green); border-color: #6fd4b0; }\n.ftab-red.active { background: var(--red-bg); color: var(--red); border-color: #f5a0a0; }\n\n.btn {\n  display: inline-flex; align-items: center; gap: 7px;\n  padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500;\n  cursor: pointer; border: none; font-family: inherit; transition: .15s; text-decoration: none;\n}\n.btn-primary { background: var(--pjd-600); color: #fff; }\n.btn-primary:hover { background: var(--pjd-700); }\n.btn-ghost { background: var(--surf3); color: var(--ink2); border: 1px solid var(--border); }\n.btn-ghost:hover { background: var(--border); }\n.btn-danger { background: var(--red-bg); color: var(--red); border: 1px solid #fca5a5; }\n.btn-danger:hover { background: #fcdcdc; }\n.btn-sm { padding: 5px 11px; font-size: 12px; }\n.btn-icon { width: 32px; height: 32px; padding: 0; justify-content: center; }\n\ntable { width: 100%; border-collapse: collapse; }\nthead tr { border-bottom: 1px solid var(--border); }\nth {\n  padding: 10px 16px; text-align: left; font-size: 11.5px; font-weight: 600;\n  color: var(--ink4); letter-spacing: .04em; text-transform: uppercase; white-space: nowrap;\n}\ntd {\n  padding: 13px 16px; font-size: 13px; color: var(--ink2);\n  border-bottom: 1px solid var(--surf3);\n}\ntbody tr { transition: background .12s; }\ntbody tr:hover td { background: var(--pjd-50); }\ntbody tr:last-child td { border-bottom: none; }\n\n.chamado-id {\n  font-family: 'DM Mono', 'Courier New', monospace; font-size: 12px; font-weight: 500;\n  color: var(--pjd-700); background: var(--pjd-100); padding: 3px 8px; border-radius: 5px;\n  display: inline-block;\n}\n.supplier-name { font-weight: 500; color: var(--ink); }\n.supplier-doc { font-size: 11.5px; color: var(--ink4); font-family: 'DM Mono', 'Courier New', monospace; }\n.amount { font-size: 14px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }\n.due-date { font-size: 12.5px; }\n.due-overdue { color: var(--red); font-weight: 500; }\n.due-today { color: var(--amber); font-weight: 500; }\n.due-ok { color: var(--ink3); }\n\n/* Status badges */\n.badge {\n  display: inline-flex; align-items: center; gap: 5px;\n  padding: 3px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 600; white-space: nowrap;\n}\n.badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; }\n.b-aprovacao { background: var(--amber-bg); color: var(--amber); }\n.b-aprovacao::before { background: var(--amber); }\n.b-aprovado { background: var(--green-bg); color: var(--green); }\n.b-aprovado::before { background: var(--green); }\n.b-pago { background: #e0f2fe; color: #0369a1; }\n.b-pago::before { background: #0369a1; }\n.b-rascunho { background: var(--surf3); color: var(--ink4); }\n.b-rascunho::before { background: var(--ink4); }\n.b-rejeitado { background: var(--red-bg); color: var(--red); }\n.b-rejeitado::before { background: var(--red); }\n\n.actions-cell { display: flex; align-items: center; gap: 6px; }\n.action-approve {\n  width: 28px; height: 28px; border-radius: 6px; border: none; cursor: pointer;\n  background: var(--green-bg); color: var(--green);\n  display: flex; align-items: center; justify-content: center; transition: .15s;\n}\n.action-approve:hover { background: #b3f0d8; }\n.action-reject {\n  width: 28px; height: 28px; border-radius: 6px; border: none; cursor: pointer;\n  background: var(--red-bg); color: var(--red);\n  display: flex; align-items: center; justify-content: center; transition: .15s;\n}\n.action-reject:hover { background: #fcdcdc; }\n.action-view {\n  width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer;\n  background: var(--surface); color: var(--ink4);\n  display: flex; align-items: center; justify-content: center; transition: .15s;\n}\n.action-view:hover { background: var(--surf3); color: var(--ink2); }\n\n.table-footer {\n  padding: 12px 20px; border-top: 1px solid var(--border);\n  display: flex; align-items: center; justify-content: space-between;\n  font-size: 12.5px; color: var(--ink4);\n}\n.pagination { display: flex; gap: 4px; }\n.pg-btn {\n  width: 30px; height: 30px; border-radius: 7px; border: 1px solid var(--border);\n  background: var(--surface); color: var(--ink3); font-size: 12px; font-family: inherit;\n  cursor: pointer; display: flex; align-items: center; justify-content: center; transition: .15s;\n}\n.pg-btn:hover { background: var(--surf3); }\n.pg-btn.active { background: var(--pjd-600); color: #fff; border-color: var(--pjd-600); }\n\n/* ── FORMULÁRIO CP ── */\n.form-page { display: none; }\n.form-page.visible { display: block; }\n.form-card {\n  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);\n  box-shadow: var(--shadow-sm); overflow: hidden; margin-bottom: 20px;\n}\n.form-card-header {\n  padding: 16px 24px; border-bottom: 1px solid var(--border);\n  display: flex; align-items: center; gap: 12px;\n}\n.form-card-icon {\n  width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center;\n}\n.form-card-title { font-size: 14px; font-weight: 600; color: var(--ink); }\n.form-card-sub { font-size: 12px; color: var(--ink4); }\n.form-card-body { padding: 24px; }\n\n.form-grid { display: grid; gap: 16px; }\n.g2 { grid-template-columns: 1fr 1fr; }\n.g3 { grid-template-columns: 1fr 1fr 1fr; }\n.g4 { grid-template-columns: 1fr 1fr 1fr 1fr; }\n\n.field { display: flex; flex-direction: column; gap: 6px; }\n.field label { font-size: 12px; font-weight: 600; color: var(--ink3); letter-spacing: .01em; }\n.field label .req { color: var(--pjd-600); margin-left: 2px; }\n.field input, .field select, .field textarea {\n  border: 1.5px solid var(--border2); border-radius: 8px;\n  padding: 9px 12px; font-family: inherit; font-size: 13.5px; color: var(--ink);\n  background: var(--surface); outline: none; transition: .15s; width: 100%;\n}\n.field input:focus, .field select:focus, .field textarea:focus {\n  border-color: var(--pjd-500); box-shadow: 0 0 0 3px rgba(34,119,224,.1);\n}\n.field input::placeholder { color: var(--ink4); }\n.field input[readonly], .field input.calc {\n  background: var(--pjd-50); color: var(--pjd-700); font-weight: 600;\n  border-color: var(--pjd-300);\n}\n.field .field-hint { font-size: 11.5px; color: var(--ink4); }\n.field .field-alert {\n  font-size: 11.5px; color: var(--amber); background: var(--amber-bg);\n  padding: 6px 10px; border-radius: 6px; border-left: 2px solid var(--amber);\n}\n\n.section-divider {\n  height: 1px; background: var(--border); margin: 4px 0 20px;\n}\n\n/* Rateio dinâmico */\n.rateio-item {\n  background: var(--surf2); border: 1px solid var(--border); border-radius: 10px;\n  padding: 16px; margin-bottom: 10px; position: relative;\n}\n.rateio-item-title {\n  font-size: 12px; font-weight: 600; color: var(--pjd-700);\n  margin-bottom: 12px; display: flex; align-items: center; gap: 8px;\n}\n.rateio-num {\n  width: 22px; height: 22px; background: var(--pjd-600); color: #fff;\n  border-radius: 5px; font-size: 11px; font-weight: 700;\n  display: flex; align-items: center; justify-content: center;\n}\n\n/* Upload area */\n.upload-zone {\n  border: 2px dashed var(--border2); border-radius: 10px; padding: 28px;\n  text-align: center; cursor: pointer; transition: .15s; background: var(--surf2);\n}\n.upload-zone:hover { border-color: var(--pjd-400); background: var(--pjd-50); }\n.upload-icon { color: var(--pjd-400); margin: 0 auto 10px; display: block; }\n.upload-text { font-size: 13px; color: var(--ink3); }\n.upload-sub { font-size: 12px; color: var(--ink4); margin-top: 4px; }\n.upload-btn-wrap { margin-top: 14px; }\n\n/* Form footer */\n.form-footer {\n  display: flex; align-items: center; justify-content: space-between;\n  padding: 20px 24px; background: var(--surf2); border-top: 1px solid var(--border);\n}\n\n/* ── DASHBOARD PAGE ── */\n.dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }\n\n/* Próximos vencimentos */\n.venc-item {\n  display: flex; align-items: center; gap: 12px; padding: 12px 0;\n  border-bottom: 1px solid var(--surf3);\n}\n.venc-item:last-child { border-bottom: none; }\n.venc-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }\n.venc-info { flex: 1; }\n.venc-name { font-size: 13px; font-weight: 500; color: var(--ink); }\n.venc-detail { font-size: 11.5px; color: var(--ink4); margin-top: 1px; }\n.venc-amount { font-size: 13px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }\n.venc-date { font-size: 11px; color: var(--ink4); text-align: right; margin-top: 1px; }\n\n/* ── MINI CHART (CSS only) ── */\n.sparkline { display: flex; align-items: flex-end; gap: 4px; height: 40px; padding: 0 2px; }\n.spark-bar {\n  flex: 1; border-radius: 3px 3px 0 0; background: var(--pjd-400); opacity: .6;\n  transition: opacity .2s;\n}\n.spark-bar:hover { opacity: 1; }\n.spark-bar.highlight { background: var(--pjd-600); opacity: 1; }\n\n/* ── NOTIFICAÇÃO TOAST ── */\n.toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 500; display: flex; flex-direction: column; gap: 10px; }\n.toast {\n  background: var(--ink); color: #fff; border-radius: 10px; padding: 14px 18px;\n  font-size: 13px; box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 12px;\n  animation: toastIn .3s cubic-bezier(.16,1,.3,1);\n  max-width: 340px;\n}\n@keyframes toastIn { from { opacity:0; transform:translateY(16px) scale(.96); } to { opacity:1; transform:translateY(0) scale(1); } }\n.toast-icon { flex-shrink: 0; }\n.toast-text .tt { font-weight: 600; font-size: 13px; }\n.toast-text .ts { font-size: 12px; color: rgba(255,255,255,.65); margin-top: 2px; }\n\n/* ── MODAL ── */\n.modal-backdrop {\n  position: fixed; inset: 0; background: rgba(10,34,64,.45); z-index: 200;\n  display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px);\n}\n.modal-backdrop.open { display: flex; }\n.modal {\n  background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);\n  width: 440px; max-width: calc(100vw - 40px); animation: modalIn .25s cubic-bezier(.16,1,.3,1);\n}\n@keyframes modalIn { from { opacity:0; transform:scale(.95) translateY(10px); } to { opacity:1; transform:scale(1) translateY(0); } }\n.modal-header { padding: 22px 24px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }\n.modal-header h3 { font-size: 16px; font-weight: 600; }\n.modal-body { padding: 22px 24px; }\n.modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }\n.modal-close { background: none; border: none; cursor: pointer; color: var(--ink4); width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; }\n.modal-close:hover { background: var(--surf3); color: var(--ink); }\n\n/* SVG Icons inline */\nsvg { display: block; }\n\n/* Animações de entrada */\n.fade-in { animation: fadeIn .35s ease both; }\n@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }\n\n.stagger-1 { animation-delay: .05s; }\n.stagger-2 { animation-delay: .1s; }\n.stagger-3 { animation-delay: .15s; }\n.stagger-4 { animation-delay: .2s; }\n\n\n.detail-section { margin-bottom:20px; }\n.detail-section-title {\n  font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;\n  color:var(--ink4);margin-bottom:10px;padding-bottom:6px;\n  border-bottom:1px solid var(--surf3);\n}\n.detail-row {\n  display:flex;justify-content:space-between;align-items:flex-start;\n  padding:6px 0;font-size:13px;\n}\n.detail-label { color:var(--ink4);flex-shrink:0;margin-right:12px; }\n.detail-value { color:var(--ink);font-weight:500;text-align:right; }\n.detail-value.mono { font-family:'DM Mono',monospace;font-size:12px;color:var(--pjd-700); }\n.timeline-item {\n  display:flex;gap:12px;padding:8px 0;\n  border-bottom:1px solid var(--surf3);font-size:12.5px;\n}\n.timeline-dot {\n  width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px;\n}\n.comment-box {\n  background:var(--red-bg);border:1px solid #fca5a5;border-radius:8px;\n  padding:12px 14px;margin-top:8px;font-size:13px;color:var(--red);\n  border-left:3px solid var(--red);\n}\n\n/* Scrollbar */\n::-webkit-scrollbar { width: 5px; }\n::-webkit-scrollbar-track { background: transparent; }\n::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 10px; }\n\n/* Responsivo básico */\n@media (max-width: 1100px) {\n  .metrics-grid { grid-template-columns: repeat(2, 1fr); }\n  .dashboard-grid { grid-template-columns: 1fr; }\n  .g4 { grid-template-columns: 1fr 1fr; }\n}";
+  document.head ? document.head.appendChild(s) : document.body.insertBefore(s, document.body.firstChild);
+  var l = document.createElement('link');
+  l.rel = 'stylesheet';
+  l.href = 'https:
+  document.head ? document.head.appendChild(l) : document.body.appendChild(l);
+})();
+const USUARIO = window.USUARIO || {};
+const SB_URL = window.SB_URL || '';
+const SB_KEY = window.SB_KEY || '';
+const SCRIPT_URL = window.SCRIPT_URL || '';
+let FILIAIS = [], CCS = [], CONTAS = [], MAP_CC = {}, CP_DADOS = [], PENDENTES = [];
+async function carregarDados() {
+  try {
+    const h = {'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json'};
+    const [f, cc, c, fc, cp, pend] = await Promise.all([
+      fetch(SB_URL+'/rest/v1/filiais?ativo=eq.true&order=nome', {headers:h}).then(r=>r.json()),
+      fetch(SB_URL+'/rest/v1/centros_custo?order=nome', {headers:h}).then(r=>r.json()),
+      fetch(SB_URL+'/rest/v1/plano_contas?tipo=eq.A&order=descricao&limit=200', {headers:h}).then(r=>r.json()),
+      fetch(SB_URL+'/rest/v1/filial_cc', {headers:h}).then(r=>r.json()),
+      fetch(SB_URL+'/rest/v1/cp_lancamentos?order=criado_em.desc&limit=20', {headers:h}).then(r=>r.json()),
+      fetch(SB_URL+'/rest/v1/cp_lancamentos?status=in.(Aguard.+Coordena%C3%A7%C3%A3o,Aguard.+Diretoria)&order=dt_vencimento.asc', {headers:h}).then(r=>r.json()),
+    ]);
+    FILIAIS   = Array.isArray(f)    ? f    : [];
+    CCS       = Array.isArray(cc)   ? cc   : [];
+    CONTAS    = Array.isArray(c)    ? c    : [];
+    PENDENTES = Array.isArray(pend) ? pend : [];
+    CP_DADOS  = Array.isArray(cp)   ? cp   : [];
+    if (Array.isArray(fc)) {
+      fc.forEach(r => {
+        if (!MAP_CC[r.filial_id]) MAP_CC[r.filial_id] = [];
+        MAP_CC[r.filial_id].push(r.cc_id);
+      });
+    }
+  } catch(e) {
+    console.error('Erro ao carregar dados:', e);
+  }
+}
+(function() {
+  function initUsuario() {
+    if (typeof USUARIO === 'undefined' || !USUARIO.nome) return;
+    const nome = USUARIO.nome || 'Usuário';
+    const iniciais = nome.split(' ').map(p => p[0]).slice(0,2).join('').toUpperCase();
+    const nivel = USUARIO.nivel || '';
+    const elAvatar = document.getElementById('userAvatar');
+    const elNome   = document.getElementById('userName');
+    const elRole   = document.getElementById('userRole');
+    const elSubt   = document.getElementById('dashSubtitle');
+    if (elAvatar) elAvatar.textContent = iniciais;
+    if (elNome)   elNome.textContent   = nome;
+    if (elRole)   elRole.textContent   = nivel + ' · ' + (USUARIO.filial_nome || 'Matriz');
+    if (elSubt) {
+      const hoje = new Date();
+      const diasSemana = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+      const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+      const dataFormatada = diasSemana[hoje.getDay()] + ', ' + hoje.getDate() + ' de ' + meses[hoje.getMonth()] + ' de ' + hoje.getFullYear();
+      elSubt.textContent = dataFormatada + ' · ' + (USUARIO.filial_nome || 'Matriz');
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initUsuario);
+  } else {
+    initUsuario();
+  }
+})();
+const pages = ['dashboard','cp','lancamento','cr','aprovacoes','fluxo','orcamento'];
+function showPage(id, el) {
+  pages.forEach(p => {
+    const pageEl = document.getElementById('page-'+p);
+    if (pageEl) pageEl.style.display = p === id ? 'block' : 'none';
+  });
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+  else {
+    const navEl = document.querySelector(`.nav-item[data-page="${id}"]`);
+    if (navEl) navEl.classList.add('active');
+  }
+  window.scrollTo(0,0);
+}
+function calcLiquido() {
+  const b = parseFloat(document.getElementById('vBruto')?.value || 0);
+  const a = parseFloat(document.getElementById('vAcres')?.value || 0);
+  const d = parseFloat(document.getElementById('vDesc')?.value  || 0);
+  const liq = b + a - d;
+  const el = document.getElementById('vLiquido');
+  if (el) el.value = liq > 0
+    ? 'R$ ' + liq.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})
+    : '';
+}
+let buscaTimer;
+function simularBuscaCNPJ(val) {
+  clearTimeout(buscaTimer);
+  const limpo = val.replace(/\D/g,'');
+  const minLen = limpo.length === 11 ? 11 : 14;
+  if (limpo.length < minLen) return;
+  buscaTimer = setTimeout(() => buscarCNPJNoSupabase(limpo), 700);
+}
+async function buscarCNPJNoSupabase(cnpjLimpo) {
+  const razaoEl = document.getElementById('razaoInput');
+  razaoEl.placeholder = 'Buscando...';
+  razaoEl.value = '';
+  document.getElementById('endForn').style.display = 'none';
+  document.getElementById('cadastroForn').style.display = 'none';
+  try {
+    const url = `${SB_URL}/rest/v1/fornecedores?cnpj_cpf=eq.${encodeURIComponent(cnpjLimpo)}&limit=1`;
+    const res = await fetch(url, {
+      headers: {
+        'apikey': SB_KEY,
+        'Authorization': 'Bearer ' + SB_KEY,
+        'Content-Type': 'application/json'
+      }
+    });
+    const dados = await res.json();
+    if (dados && dados.length > 0) {
+      const f = dados[0];
+      document.getElementById('razaoInput').value  = f.razao_social || '';
+      document.getElementById('cepInput').value    = f.cep          || '';
+      document.getElementById('endInput').value    = f.endereco     || '';
+      document.getElementById('numInput').value    = f.numero       || '';
+      document.getElementById('bairInput').value   = f.bairro       || '';
+      document.getElementById('telInput').value    = f.telefone     || '';
+      document.getElementById('emInput').value     = f.email        || '';
+      document.getElementById('endForn').style.display    = 'block';
+      document.getElementById('cadastroForn').style.display = 'none';
+      razaoEl.placeholder = 'Razão Social / Nome';
+      toast('Fornecedor encontrado', 'Dados carregados da base de cadastros.', 'success');
+    } else {
+      if (cnpjLimpo.length === 14) {
+        await buscarReceitaFederal(cnpjLimpo);
+      } else {
+        abrirCadastroManual();
+      }
+    }
+  } catch(err) {
+    console.error('Erro ao buscar CNPJ:', err);
+    razaoEl.placeholder = 'Razão Social / Nome';
+    abrirCadastroManual();
+  }
+}
+async function buscarReceitaFederal(cnpj) {
+  try {
+    const res = await fetch(`https:
+    if (res.ok) {
+      const d = await res.json();
+      document.getElementById('razaoInput').value = d.razao_social || d.nome_fantasia || '';
+      document.getElementById('cepInput').value   = (d.cep || '').replace(/\D/g,'').replace(/(\d{5})(\d{3})/, '$1-$2');
+      document.getElementById('endInput').value   = d.logradouro   || '';
+      document.getElementById('numInput').value   = d.numero       || '';
+      document.getElementById('bairInput').value  = d.bairro       || '';
+      document.getElementById('telInput').value   = d.ddd_telefone_1 ? '(' + d.ddd_telefone_1.substring(0,2) + ') ' + d.ddd_telefone_1.substring(2) : '';
+      document.getElementById('emInput').value    = d.email        || '';
+      document.getElementById('endForn').style.display    = 'block';
+      document.getElementById('cadastroForn').style.display = 'none';
+      document.getElementById('razaoInput').placeholder = 'Razão Social / Nome';
+      document.getElementById('endForn').dataset.novoFornecedor = 'true';
+      toast('CNPJ encontrado na Receita Federal', 'Novo fornecedor — dados pré-preenchidos. Será cadastrado ao salvar.', 'success');
+    } else {
+      abrirCadastroManual();
+    }
+  } catch(err) {
+    abrirCadastroManual();
+  }
+}
+function abrirCadastroManual() {
+  document.getElementById('razaoInput').placeholder = 'Razão Social / Nome';
+  document.getElementById('cadastroForn').style.display = 'block';
+  document.getElementById('endForn').style.display      = 'none';
+  toast('Fornecedor não encontrado', 'Preencha os dados manualmente — será cadastrado ao salvar.', 'info');
+}
+let boletoTimer;
+function simularBoleto(val) {
+  clearTimeout(boletoTimer);
+  if (val.replace(/\D/g,'').length < 30) return;
+  boletoTimer = setTimeout(() => {
+    document.getElementById('vBruto').value = '3998.00';
+    calcLiquido();
+    toast('Boleto processado','Valor e vencimento extraídos automaticamente.','success');
+  }, 800);
+}
+const ccPorFilial = {
+  'Matriz /0001': ['Sedes','Corporativo','Administrativo','Transporte|Franca','Transporte|Limeira','Imóveis'],
+  'Bela Mansão /0002': ['Sedes','Corporativo','Administrativo','Café SG','Café PL','Café SF','Soja','Gado','SMB','Tia Luiza'],
+  'São Gregório /0003': ['Sedes','Corporativo','Administrativo','Café SG','Café PL','Café SF','Soja','Gado','SMB','Tia Luiza'],
+  'Palestina 1 /0004': ['Sedes','Corporativo','Administrativo','Imóveis','Café SG','Café PL','Café SF','Soja','Gado','SMB'],
+  'Santa Fé /0005': ['Sedes','Corporativo','Administrativo','Café SG','Café PL','Café SF','Soja','Gado','SMB','Tia Luiza'],
+};
+function atualizarCCs() {
+  const filial = document.getElementById('filialSelect').value;
+  const ccs = ccPorFilial[filial] || [];
+  gerarRateio(ccs);
+}
+function gerarRateio(ccs) {
+  const n = parseInt(document.getElementById('rateioSel').value);
+  const filial = document.getElementById('filialSelect').value;
+  const listaCC = ccs || ccPorFilial[filial] || ['Sedes','Corporativo','Administrativo'];
+  const opsCCs = listaCC.map(cc => `<option value="${cc}">${cc}</option>`).join('');
+  const container = document.getElementById('rateioContainer');
+  let html = '';
+  for (let i = 1; i <= n; i++) {
+    html += `<div class="rateio-item">
+      <div class="rateio-item-title"><div class="rateio-num">${i}</div>Conta ${i}</div>
+      <div class="form-grid g3">
+        <div class="field" style="grid-column:span 2">
+          <label>Conta Financeira <span class="req">*</span></label>
+          <input type="text" list="listaContas" placeholder="Digite para buscar...">
+        </div>
+        <div class="field">
+          <label>Centro de Custo <span class="req">*</span></label>
+          <select><option value="">Selecione...</option>${opsCCs}</select>
+        </div>
+      </div>
+    </div>`;
+  }
+  container.innerHTML = html;
+}
+function gerarParcelas() {}
+function toggleBenef(v) {
+  document.getElementById('divBenef').style.display = v === 'NÃO' ? 'block' : 'none';
+}
+function abrirModal(id, chamado, forn, valor) {
+  document.getElementById('modalChamado').textContent = chamado;
+  document.getElementById('modalForn').textContent = forn;
+  document.getElementById('modalValor').textContent = typeof valor === 'string' && valor.startsWith('R$') ? valor : 'R$ ' + valor;
+  document.getElementById('modalBackdrop').classList.add('open');
+  document.getElementById('modalBackdrop').dataset.id = id;
+  document.getElementById('modalBackdrop').dataset.chamado = chamado;
+}
+function fecharModal() {
+  document.getElementById('modalBackdrop').classList.remove('open');
+}
+function confirmarAprovacao() {
+  const backdrop = document.getElementById('modalBackdrop');
+  const id = backdrop.dataset.id;
+  const numero = backdrop.dataset.chamado;
+  fecharModal();
+  if (id && SCRIPT_URL) {
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: {'Content-Type':'application/x-www-form-urlencoded'},
+      body: `acao=aprovar&tipo=cp&id=${encodeURIComponent(id)}&numero=${encodeURIComponent(numero)}`
+    })
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) {
+        toast('Aprovação confirmada', d.novoStatus || 'Lançamento aprovado com sucesso.', 'success');
+        setTimeout(() => location.reload(), 2000);
+      } else {
+        alert('Erro: ' + d.msg);
+      }
+    });
+  } else {
+    toast('Aprovação confirmada','Lançamento aprovado.','success');
+  }
+}
+document.getElementById('modalBackdrop').addEventListener('click', e => {
+  if (e.target === e.currentTarget) fecharModal();
+});
+function solicitarPagamento() {
+  toast('Pagamento solicitado','CP2026-00005 enviado para aprovação da Coordenação.','success');
+  setTimeout(() => showPage('cp'), 1800);
+}
+const DEMO_CP = {
+  'CP2026-00001': {id:'1',numero:'CP2026-00001',fornecedor_nome:'Bolsa Agronegocios Representações',tipo_documento:'NF-e',numero_nf:'85028',dt_emissao:'2026-05-20',dt_vencimento:'2026-05-27',forma_pagamento:'Boleto Bancário',valor_bruto:3998,acrescimos:0,descontos:0,valor_liquido:3998,finalidade:'Serviços agrícolas 05/2026',observacoes:'',status:'Aguard. Diretoria',criado_em:'2026-05-23T16:53:00',parcelado:false,rateio:false,cc_nome:'Café SG',conta_desc:'22310 · Consultorias - Agro'},
+  'CP2026-00002': {id:'2',numero:'CP2026-00002',fornecedor_nome:'MTG Administração e Assessoria SA',tipo_documento:'NF-e',numero_nf:'ABRIL/26',dt_emissao:'2026-05-01',dt_vencimento:'2026-05-29',forma_pagamento:'Boleto Bancário',valor_bruto:137.22,acrescimos:0,descontos:0,valor_liquido:137.22,finalidade:'Mensalidade sistema Abril/26',observacoes:'',status:'Aguard. Diretoria',criado_em:'2026-05-23T18:18:00',parcelado:false,rateio:false,cc_nome:'Administrativo',conta_desc:'21770 · Assinaturas e Mensalidades'},
+};
+function abrirPreviewDemo(numero) {
+  const dados = DEMO_CP[numero];
+  if (dados) abrirPreview(dados);
+}
+function abrirPreview(dados) {
+  document.getElementById('previewNumero').textContent = dados.numero || '';
+  document.getElementById('previewForn').textContent   = dados.fornecedor_nome || dados.beneficiario_nome || '—';
+  const statusCor = {
+    'Aguard. Coordenação':'var(--amber)','Aguard. Diretoria':'var(--amber)',
+    'Aprovado':'var(--green)','Pago':'#0369a1',
+    'Rejeitado':'var(--red)','Rascunho':'var(--ink4)'
+  };
+  const cor = statusCor[dados.status] || 'var(--ink3)';
+  let parcelasHtml = '';
+  if (dados.rateio_itens && dados.rateio_itens.length > 0) {
+    const rows = dados.rateio_itens.map((r,i) => `
+      <tr style="border-bottom:1px solid var(--surf3)">
+        <td style="padding:6px 8px;font-size:12px;color:var(--ink4)">Parcela ${r.parcela_num}/${r.parcela_total}</td>
+        <td style="padding:6px 8px;font-size:13px">${r.conta_desc || '—'}</td>
+        <td style="padding:6px 8px;font-size:13px">${r.cc_nome || '—'}</td>
+        <td style="padding:6px 8px;font-size:13px;text-align:right;font-weight:600">${fmtMoeda(r.valor)}</td>
+        <td style="padding:6px 8px;font-size:12px;color:${vencCor(r.dt_vencimento)}">${fmtData(r.dt_vencimento)}</td>
+      </tr>`).join('');
+    parcelasHtml = `
+      <div class="detail-section" style="margin-top:16px">
+        <div class="detail-section-title">Rateio e Parcelas</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="background:var(--surf2)">
+              <th style="padding:6px 8px;text-align:left;font-size:11px;color:var(--ink4)">Parcela</th>
+              <th style="padding:6px 8px;text-align:left;font-size:11px;color:var(--ink4)">Conta Financeira</th>
+              <th style="padding:6px 8px;text-align:left;font-size:11px;color:var(--ink4)">Centro de Custo</th>
+              <th style="padding:6px 8px;text-align:right;font-size:11px;color:var(--ink4)">Valor</th>
+              <th style="padding:6px 8px;text-align:left;font-size:11px;color:var(--ink4)">Vencimento</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  } else {
+    parcelasHtml = `
+      <div class="detail-section" style="margin-top:4px">
+        <div class="detail-section-title">Classificação</div>
+        <div class="detail-row"><span class="detail-label">Conta Financeira</span><span class="detail-value">${dados.conta_financeira || dados.conta_desc || '—'}</span></div>
+        <div class="detail-row"><span class="detail-label">Centro de Custo</span><span class="detail-value">${dados.centro_custo || dados.cc_nome || '—'}</span></div>
+        <div class="detail-row"><span class="detail-label">Parcelado</span><span class="detail-value">${dados.parcelado ? 'Sim' : 'Não'}</span></div>
+        <div class="detail-row"><span class="detail-label">Rateio</span><span class="detail-value">${dados.rateio ? 'Sim' : 'Não'}</span></div>
+      </div>`;
+  }
+  document.getElementById('previewBody').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px">
+      <div>
+        <div class="detail-section">
+          <div class="detail-section-title">Documento</div>
+          <div class="detail-row"><span class="detail-label">Tipo</span><span class="detail-value">${dados.tipo_documento || '—'}</span></div>
+          <div class="detail-row"><span class="detail-label">N° NF/Doc</span><span class="detail-value mono">${dados.numero_nf || '—'}</span></div>
+          <div class="detail-row"><span class="detail-label">Emissão</span><span class="detail-value">${fmtData(dados.dt_emissao)}</span></div>
+          <div class="detail-row"><span class="detail-label">Vencimento</span>
+            <span class="detail-value" style="color:${vencCor(dados.dt_vencimento)}">${fmtData(dados.dt_vencimento)}</span></div>
+          <div class="detail-row"><span class="detail-label">Forma Pgto</span><span class="detail-value">${dados.forma_pagamento || '—'}</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="detail-section">
+          <div class="detail-section-title">Valores</div>
+          <div class="detail-row"><span class="detail-label">Valor Bruto</span><span class="detail-value">${fmtMoeda(dados.valor_bruto)}</span></div>
+          <div class="detail-row"><span class="detail-label">Acréscimos</span><span class="detail-value">${fmtMoeda(dados.acrescimos)}</span></div>
+          <div class="detail-row"><span class="detail-label">Descontos</span><span class="detail-value" style="color:var(--green)">- ${fmtMoeda(dados.descontos)}</span></div>
+          <div class="detail-row" style="border-top:1px solid var(--border);margin-top:4px;padding-top:8px">
+            <span class="detail-label" style="font-weight:600;color:var(--ink)">Líquido</span>
+            <span class="detail-value" style="font-size:15px">${fmtMoeda(dados.valor_liquido)}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    ${parcelasHtml}
+    ${dados.finalidade ? `
+    <div class="detail-section" style="margin-top:4px">
+      <div class="detail-section-title">Finalidade / Histórico</div>
+      <div style="font-size:13px;color:var(--ink2);line-height:1.6">${dados.finalidade}</div>
+    </div>` : ''}
+    ${dados.observacoes ? `
+    <div class="detail-section" style="margin-top:4px">
+      <div class="detail-section-title">Observações</div>
+      <div style="font-size:13px;color:var(--ink2);background:var(--surf2);padding:10px 12px;border-radius:8px;border:1px solid var(--border);line-height:1.6">${dados.observacoes}</div>
+    </div>` : ''}
+    ${dados.status === 'Rejeitado' && dados.motivo_rejeicao ? `
+    <div class="detail-section" style="margin-top:4px">
+      <div class="detail-section-title" style="color:var(--red)">Motivo da Rejeição</div>
+      <div class="comment-box">${dados.motivo_rejeicao}</div>
+    </div>` : ''}
+    <div style="display:flex;align-items:center;gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid var(--surf3)">
+      <span class="badge" style="background:${cor}15;color:${cor};border:1px solid ${cor}40">
+        <span style="width:5px;height:5px;border-radius:50%;background:${cor};display:inline-block;margin-right:5px"></span>
+        ${dados.status}
+      </span>
+      <span style="font-size:12px;color:var(--ink4)">Lançado em ${fmtDataHora(dados.criado_em)}</span>
+    </div>
+  `;
+  const podeAprovar = (USUARIO.nivel === 'Coordenação' && dados.status === 'Aguard. Coordenação') ||
+                      (USUARIO.nivel === 'Diretoria'   && dados.status === 'Aguard. Diretoria') ||
+                      (USUARIO.nivel === 'Admin');
+  document.getElementById('previewFooter').innerHTML = podeAprovar ? `
+    <button class="btn btn-ghost btn-sm" onclick="fecharPreview()">Fechar</button>
+    <button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:1px solid #fca5a5"
+      onclick="fecharPreview();abrirModalRejeicao('${dados.id}','${dados.numero}')">
+      Rejeitar
+    </button>
+    <button class="btn btn-primary btn-sm"
+      onclick="fecharPreview();abrirModal('${dados.id}','${dados.numero}','${(dados.fornecedor_nome||'').replace(/'/g,"\'")}','${fmtMoeda(dados.valor_liquido)}')">
+      Aprovar
+    </button>
+  ` : `<button class="btn btn-ghost btn-sm" onclick="fecharPreview()">Fechar</button>`;
+  document.getElementById('modalPreview').classList.add('open');
+}
+function fecharPreview() {
+  document.getElementById('modalPreview').classList.remove('open');
+}
+let _drawerData = null;
+function abrirDrawer(dados) {
+  _drawerData = dados;
+  document.getElementById('drawerNumero').textContent = dados.numero || '';
+  const statusCor = {
+    'Aguard. Coordenação': 'var(--amber)', 'Aguard. Diretoria': 'var(--amber)',
+    'Aprovado': 'var(--green)', 'Pago': '#0369a1',
+    'Rejeitado': 'var(--red)', 'Rascunho': 'var(--ink4)'
+  };
+  const cor = statusCor[dados.status] || 'var(--ink3)';
+  document.getElementById('drawerBody').innerHTML = `
+    <div class="detail-section">
+      <div class="detail-section-title">Identificação</div>
+      <div class="detail-row"><span class="detail-label">Status</span>
+        <span class="badge" style="background:${cor}15;color:${cor};border:1px solid ${cor}40">
+          <span style="width:5px;height:5px;border-radius:50%;background:${cor};display:inline-block;margin-right:5px"></span>
+          ${dados.status || '—'}
+        </span>
+      </div>
+      <div class="detail-row"><span class="detail-label">Filial</span><span class="detail-value">${dados.filial_id || '—'}</span></div>
+      <div class="detail-row"><span class="detail-label">Tipo de Documento</span><span class="detail-value">${dados.tipo_documento || '—'}</span></div>
+      <div class="detail-row"><span class="detail-label">N° NF / Documento</span><span class="detail-value mono">${dados.numero_nf || '—'}</span></div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Fornecedor / Beneficiário</div>
+      <div class="detail-row"><span class="detail-label">Fornecedor</span><span class="detail-value">${dados.fornecedor_nome || '—'}</span></div>
+      <div class="detail-row"><span class="detail-label">Beneficiário</span><span class="detail-value">${dados.beneficiario_nome || dados.fornecedor_nome || '—'}</span></div>
+      <div class="detail-row"><span class="detail-label">CNPJ/CPF</span><span class="detail-value mono">${dados.beneficiario_cnpj || '—'}</span></div>
+      <div class="detail-row"><span class="detail-label">Forma de Pagamento</span><span class="detail-value">${dados.forma_pagamento || '—'}</span></div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Valores</div>
+      <div class="detail-row"><span class="detail-label">Valor Bruto</span>
+        <span class="detail-value">${fmtMoeda(dados.valor_bruto)}</span></div>
+      <div class="detail-row"><span class="detail-label">Acréscimos</span>
+        <span class="detail-value">${fmtMoeda(dados.acrescimos)}</span></div>
+      <div class="detail-row"><span class="detail-label">Descontos</span>
+        <span class="detail-value" style="color:var(--green)">- ${fmtMoeda(dados.descontos)}</span></div>
+      <div class="detail-row" style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px">
+        <span class="detail-label" style="font-weight:600;color:var(--ink)">Valor Líquido</span>
+        <span class="detail-value" style="font-size:16px;color:var(--ink)">${fmtMoeda(dados.valor_liquido)}</span>
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Datas</div>
+      <div class="detail-row"><span class="detail-label">Emissão</span><span class="detail-value">${fmtData(dados.dt_emissao)}</span></div>
+      <div class="detail-row"><span class="detail-label">Vencimento</span>
+        <span class="detail-value" style="color:${vencCor(dados.dt_vencimento)}">${fmtData(dados.dt_vencimento)}</span></div>
+      <div class="detail-row"><span class="detail-label">Lançado em</span><span class="detail-value">${fmtDataHora(dados.criado_em)}</span></div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Classificação</div>
+      <div class="detail-row"><span class="detail-label">Finalidade</span><span class="detail-value">${dados.finalidade || '—'}</span></div>
+      ${dados.observacoes ? `<div class="detail-row"><span class="detail-label">Observações</span><span class="detail-value">${dados.observacoes}</span></div>` : ''}
+    </div>
+    ${dados.status === 'Rejeitado' && dados.motivo_rejeicao ? `
+    <div class="detail-section">
+      <div class="detail-section-title" style="color:var(--red)">Motivo da Rejeição</div>
+      <div class="comment-box">${dados.motivo_rejeicao}</div>
+    </div>` : ''}
+  `;
+  const footer = document.getElementById('drawerFooter');
+  const podeAprovar = (USUARIO.nivel === 'Coordenação' && dados.status === 'Aguard. Coordenação') ||
+                      (USUARIO.nivel === 'Diretoria' && dados.status === 'Aguard. Diretoria') ||
+                      (USUARIO.nivel === 'Admin');
+  footer.innerHTML = podeAprovar ? `
+    <button class="btn btn-ghost" onclick="fecharDrawer()">Fechar</button>
+    <button class="btn btn-danger" onclick="fecharDrawer();abrirModalRejeicao('${dados.id}','${dados.numero}')"
+      style="background:var(--red-bg);color:var(--red);border:1px solid #fca5a5">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      Rejeitar
+    </button>
+    <button class="btn btn-primary" onclick="fecharDrawer();abrirModal('${dados.id}','${dados.numero}','${dados.fornecedor_nome}','${fmtMoeda(dados.valor_liquido)}')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>
+      Aprovar
+    </button>
+  ` : `<button class="btn btn-ghost" style="margin-left:auto" onclick="fecharDrawer()">Fechar</button>`;
+  document.getElementById('drawer').style.right = '0';
+  document.getElementById('drawerBackdrop').style.display = 'block';
+}
+function fecharDrawer() {
+  document.getElementById('drawer').style.right = '-560px';
+  document.getElementById('drawerBackdrop').style.display = 'none';
+}
+let _rejId = null;
+let _rejNumero = null;
+function abrirModalRejeicao(id, numero) {
+  _rejId = id;
+  _rejNumero = numero;
+  document.getElementById('rejNumero').textContent = numero;
+  document.getElementById('motivoRejeicao').value = '';
+  document.getElementById('modalRejeicao').classList.add('open');
+}
+function fecharModalRejeicao() {
+  document.getElementById('modalRejeicao').classList.remove('open');
+}
+function confirmarRejeicao() {
+  const motivo = document.getElementById('motivoRejeicao').value.trim();
+  if (!motivo) {
+    document.getElementById('motivoRejeicao').style.borderColor = 'var(--red)';
+    document.getElementById('motivoRejeicao').focus();
+    return;
+  }
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    headers: {'Content-Type':'application/x-www-form-urlencoded'},
+    body: `acao=rejeitar&tipo=cp&id=${encodeURIComponent(_rejId)}&numero=${encodeURIComponent(_rejNumero)}&motivo=${encodeURIComponent(motivo)}`
+  })
+  .then(r => r.json())
+  .then(d => {
+    fecharModalRejeicao();
+    if (d.ok) {
+      toast('Lançamento rejeitado', 'O solicitante foi notificado por e-mail com o motivo.', 'error');
+      setTimeout(() => location.reload(), 2000);
+    } else {
+      alert('Erro: ' + d.msg);
+    }
+  });
+}
+function fmtMoeda(v) {
+  if (!v && v !== 0) return '—';
+  return 'R$ ' + parseFloat(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function fmtData(d) {
+  if (!d) return '—';
+  const dt = new Date(d + 'T12:00:00');
+  return dt.toLocaleDateString('pt-BR');
+}
+function fmtDataHora(d) {
+  if (!d) return '—';
+  const dt = new Date(d);
+  return dt.toLocaleDateString('pt-BR') + ' · ' + dt.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+}
+function vencCor(d) {
+  if (!d) return 'var(--ink3)';
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const dt = new Date(d + 'T12:00:00');
+  if (dt < hoje) return 'var(--red)';
+  if (dt.getTime() === hoje.getTime()) return 'var(--amber)';
+  return 'var(--ink3)';
+}
+function toast(titulo, msg, tipo='info') {
+  const container = document.getElementById('toastContainer');
+  const el = document.createElement('div');
+  const cor = tipo === 'success' ? '#0d9e6e' : tipo === 'error' ? '#c53030' : '#2277e0';
+  el.className = 'toast';
+  el.innerHTML = `
+    <div class="toast-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${cor}" stroke-width="2.5">
+        ${tipo==='success' ? '<polyline points="20,6 9,17 4,12"/>' : tipo==='error' ? '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>' : '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'}
+      </svg>
+    </div>
+    <div class="toast-text"><div class="tt">${titulo}</div><div class="ts">${msg}</div></div>`;
+  container.appendChild(el);
+  setTimeout(() => { el.style.opacity='0'; el.style.transform='translateY(8px)'; el.style.transition='.3s'; setTimeout(()=>el.remove(),300); }, 4000);
+}
+document.addEventListener('DOMContentLoaded', function() {
+  carregarDados().then(() => {
+    if (typeof atualizarCCs === 'function') atualizarCCs();
+    if (typeof initUsuario === 'function') initUsuario();
+  });
+});
+
+
+</script>
+</body>
+</html>
