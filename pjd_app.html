@@ -7,6 +7,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap">
 <style>
 
+
+
 :root {
   --pjd-900: #0a2240;
   --pjd-800: #0e3060;
@@ -499,16 +501,18 @@ svg { display: block; }
   .g4 { grid-template-columns: 1fr 1fr; }
 }
 
+
+
 </style>
 <script>
 (function() {
   try {
-    const hash = window.location.hash.substring(1);
+    var hash = window.location.hash.substring(1);
     if (hash) {
-      const p = new URLSearchParams(hash);
-      const d = p.get('d');
+      var p = new URLSearchParams(hash);
+      var d = p.get('d');
       if (d) {
-        const dec = JSON.parse(atob(d));
+        var dec = JSON.parse(atob(d));
         window.USUARIO    = dec.usuario    || {};
         window.SB_URL     = dec.sbUrl      || '';
         window.SB_KEY     = dec.sbKey      || '';
@@ -1602,18 +1606,21 @@ svg { display: block; }
 
 </div>
 <script>
+// ═══════════════════════════════════════════════════════════════
+// PJD Sistema Financeiro — JavaScript Principal
+// ═══════════════════════════════════════════════════════════════
 
-const USUARIO    = window.USUARIO || {};
-const SB_URL     = window.SB_URL  || '';
-const SB_KEY     = window.SB_KEY  || '';
+const USUARIO    = window.USUARIO    || {};
+const SB_URL     = window.SB_URL     || '';
+const SB_KEY     = window.SB_KEY     || '';
 const SCRIPT_URL = window.SCRIPT_URL || '';
 let FILIAIS = [], CCS = [], CONTAS = [], MAP_CC = {}, CP_DADOS = [], PENDENTES = [];
 
-// ── Carrega dados do Supabase ───────────────────────────────────────────────
+// ── Carrega dados do Supabase ──────────────────────────────────
 async function carregarDados() {
+  if (!SB_URL || !SB_KEY) return;
+  const h = {'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY};
   try {
-    if (!SB_URL || !SB_KEY) return;
-    const h = {'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json'};
     const [f, cc, c, fc, cp, pend] = await Promise.all([
       fetch(SB_URL+'/rest/v1/filiais?ativo=eq.true&order=nome', {headers:h}).then(r=>r.json()),
       fetch(SB_URL+'/rest/v1/centros_custo?order=nome', {headers:h}).then(r=>r.json()),
@@ -1627,34 +1634,31 @@ async function carregarDados() {
     CONTAS    = Array.isArray(c)    ? c    : [];
     PENDENTES = Array.isArray(pend) ? pend : [];
     CP_DADOS  = Array.isArray(cp)   ? cp   : [];
-    if (Array.isArray(fc)) {
-      fc.forEach(r => {
-        if (!MAP_CC[r.filial_id]) MAP_CC[r.filial_id] = [];
-        MAP_CC[r.filial_id].push(r.cc_id);
-      });
-    }
-  } catch(e) { console.error('Erro ao carregar dados:', e); }
+    if (Array.isArray(fc)) fc.forEach(r => {
+      if (!MAP_CC[r.filial_id]) MAP_CC[r.filial_id] = [];
+      MAP_CC[r.filial_id].push(r.cc_id);
+    });
+  } catch(e) { console.error('Erro dados:', e); }
 }
 
-// ── Init usuário ───────────────────────────────────────────────────────────
+// ── Init usuário ───────────────────────────────────────────────
 function initUsuario() {
   if (!USUARIO || !USUARIO.nome) return;
-  const nome = USUARIO.nome || 'Usuário';
-  const iniciais = nome.split(' ').map(p => p[0]).slice(0,2).join('').toUpperCase();
-  const nivel = USUARIO.nivel || '';
-  const el = (id) => document.getElementById(id);
+  const nome = USUARIO.nome;
+  const iniciais = nome.split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase();
+  const el = id => document.getElementById(id);
   if (el('userAvatar')) el('userAvatar').textContent = iniciais;
   if (el('userName'))   el('userName').textContent   = nome;
-  if (el('userRole'))   el('userRole').textContent   = nivel + ' · ' + (USUARIO.filial_nome || 'Matriz');
+  if (el('userRole'))   el('userRole').textContent   = (USUARIO.nivel||'') + ' · ' + (USUARIO.filial_nome||'Matriz');
   if (el('dashSubtitle')) {
     const hoje = new Date();
-    const dias = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+    const dias  = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
     const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-    el('dashSubtitle').textContent = dias[hoje.getDay()] + ', ' + hoje.getDate() + ' de ' + meses[hoje.getMonth()] + ' de ' + hoje.getFullYear() + ' · ' + (USUARIO.filial_nome || 'Matriz');
+    el('dashSubtitle').textContent = dias[hoje.getDay()] + ', ' + hoje.getDate() + ' de ' + meses[hoje.getMonth()] + ' de ' + hoje.getFullYear() + ' · ' + (USUARIO.filial_nome||'Matriz');
   }
 }
 
-// ── Navegação ──────────────────────────────────────────────────────────────
+// ── Navegação ──────────────────────────────────────────────────
 const pages = ['dashboard','cp','lancamento','cr','aprovacoes','fluxo','orcamento'];
 function showPage(id, el) {
   pages.forEach(p => {
@@ -1666,61 +1670,114 @@ function showPage(id, el) {
   window.scrollTo(0,0);
 }
 
-// ── Cálculo valor líquido ──────────────────────────────────────────────────
+// ── Máscara monetária ──────────────────────────────────────────
+function mascaraMoeda(input) {
+  let v = input.value.replace(/\D/g, '');
+  if (!v) { input.value = ''; return; }
+  v = (parseInt(v, 10) / 100).toFixed(2);
+  input.value = parseFloat(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function valorNumerico(str) {
+  if (!str) return 0;
+  return parseFloat(String(str).replace(/\./g,'').replace(',','.')) || 0;
+}
+function aplicarMascaraMoeda(el) {
+  if (!el) return;
+  el.addEventListener('input', function() { mascaraMoeda(this); });
+  el.setAttribute('inputmode','numeric');
+  el.placeholder = '0,00';
+}
+
+// ── Cálculo valor líquido ──────────────────────────────────────
 function calcLiquido() {
-  const b = parseFloat(document.getElementById('vBruto')?.value || 0);
-  const a = parseFloat(document.getElementById('vAcres')?.value || 0);
-  const d = parseFloat(document.getElementById('vDesc')?.value  || 0);
+  const b = valorNumerico(document.getElementById('vBruto')?.value);
+  const a = valorNumerico(document.getElementById('vAcres')?.value);
+  const d = valorNumerico(document.getElementById('vDesc')?.value);
   const liq = b + a - d;
   const el = document.getElementById('vLiquido');
-  if (el) el.value = liq > 0 ? 'R$ ' + liq.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '';
+  if (el) el.value = liq > 0 ? liq.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '';
 }
 
-// ── Busca CNPJ/CPF ─────────────────────────────────────────────────────────
-let buscaTimer;
+// ── Busca de conta financeira com lista suspensa ───────────────
+function criarCampoConta(inputId, listId) {
+  return '<div style="position:relative">'
+    + '<input type="text" id="'+inputId+'" autocomplete="off"'
+    + ' placeholder="Código ou nome da conta..." style="width:100%"'
+    + ' oninput="filtrarContas(\''+inputId+'\',\''+listId+'\')"'
+    + ' onfocus="filtrarContas(\''+inputId+'\',\''+listId+'\')"'
+    + ' onblur="setTimeout(function(){fecharListaConta(\''+listId+'\')},200)">'
+    + '<div id="'+listId+'" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:300;'
+    + 'background:var(--surface);border:1px solid var(--border);border-radius:8px;'
+    + 'box-shadow:var(--shadow-lg);max-height:220px;overflow-y:auto;margin-top:4px"></div>'
+    + '</div>';
+}
+function filtrarContas(inputId, listId) {
+  const input = document.getElementById(inputId);
+  const lista = document.getElementById(listId);
+  if (!input || !lista || !CONTAS.length) return;
+  const q = input.value.toLowerCase().trim();
+  const filtrados = q
+    ? CONTAS.filter(function(c){ return c.descricao.toLowerCase().includes(q) || (c.conta_red && c.conta_red.includes(q)); }).slice(0,15)
+    : CONTAS.slice(0,15);
+  if (!filtrados.length) { lista.style.display='none'; return; }
+  lista.style.display = 'block';
+  lista.innerHTML = filtrados.map(function(c) {
+    var label = (c.conta_red ? c.conta_red + ' · ' : '') + c.descricao;
+    var labelEsc = label.replace(/'/g,"\\'");
+    return '<div onclick="selecionarConta(\''+inputId+'\',\''+listId+'\','+c.id+',\''+labelEsc+'\')"'
+      + ' style="padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--surf3);display:flex;gap:10px;align-items:center"'
+      + ' onmouseover="this.style.background=\'var(--pjd-50)\'" onmouseout="this.style.background=\'\'">'
+      + (c.conta_red ? '<span style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--pjd-700);background:var(--pjd-100);padding:2px 6px;border-radius:4px;flex-shrink:0">'+c.conta_red+'</span>' : '')
+      + '<span>'+c.descricao+'</span>'
+      + '</div>';
+  }).join('');
+}
+function selecionarConta(inputId, listId, contaId, label) {
+  var input = document.getElementById(inputId);
+  if (input) { input.value = label; input.dataset.contaId = contaId; }
+  fecharListaConta(listId);
+}
+function fecharListaConta(listId) {
+  var lista = document.getElementById(listId);
+  if (lista) lista.style.display = 'none';
+}
+
+// ── Busca CNPJ/CPF ────────────────────────────────────────────
+var buscaTimer;
 function simularBuscaCNPJ(val) {
   clearTimeout(buscaTimer);
-  const limpo = val.replace(/\D/g,'');
-  const minLen = limpo.length === 11 ? 11 : 14;
+  var limpo = val.replace(/\D/g,'');
+  var minLen = limpo.length === 11 ? 11 : 14;
   if (limpo.length < minLen) return;
-  buscaTimer = setTimeout(() => buscarCNPJNoSupabase(limpo), 700);
+  buscaTimer = setTimeout(function(){ buscarCNPJNoSupabase(limpo); }, 700);
 }
-
 async function buscarCNPJNoSupabase(cnpjLimpo) {
-  const razaoEl = document.getElementById('razaoInput');
-  razaoEl.value = '';
-  razaoEl.readOnly = true;
+  var razaoEl = document.getElementById('razaoInput');
+  razaoEl.value = ''; razaoEl.readOnly = true;
   razaoEl.style.cssText = 'background:var(--surf2);color:var(--ink3)';
-  ['fornBuscando','fornEncontrado','cadastroForn'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
+  ['fornBuscando','fornEncontrado','cadastroForn'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.style.display='none';
   });
   document.getElementById('fornBuscando').style.display = 'block';
   try {
-    const url = SB_URL + '/rest/v1/fornecedores?cnpj_cpf=eq.' + encodeURIComponent(cnpjLimpo) + '&limit=1';
-    const res = await fetch(url, {headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY}});
-    const dados = await res.json();
+    var res = await fetch(SB_URL+'/rest/v1/fornecedores?cnpj_cpf=eq.'+encodeURIComponent(cnpjLimpo)+'&limit=1',
+      {headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+    var dados = await res.json();
     document.getElementById('fornBuscando').style.display = 'none';
     if (dados && dados.length > 0) {
-      const f = dados[0];
-      window._fornecedorId = f.id;
-      window._fornecedorNovo = false;
+      var f = dados[0]; window._fornecedorId = f.id; window._fornecedorNovo = false;
       razaoEl.value = f.razao_social || '';
       razaoEl.readOnly = true;
       razaoEl.style.cssText = 'background:var(--pjd-50);color:var(--pjd-700);font-weight:500';
       document.getElementById('fornEncontrado').style.display = 'block';
-    } else {
-      abrirCadastroManual();
-    }
+    } else { abrirCadastroManual(); }
   } catch(err) {
-    console.error('Erro CNPJ:', err);
     document.getElementById('fornBuscando').style.display = 'none';
     abrirCadastroManual();
   }
 }
-
 function abrirCadastroManual() {
-  const razaoEl = document.getElementById('razaoInput');
+  var razaoEl = document.getElementById('razaoInput');
   razaoEl.readOnly = false;
   razaoEl.style.cssText = 'border-color:var(--amber);background:var(--amber-bg)';
   razaoEl.placeholder = 'Razão Social / Nome *';
@@ -1730,261 +1787,230 @@ function abrirCadastroManual() {
   window._fornecedorNovo = true;
 }
 
-// ── Forma de pagamento dinâmica ────────────────────────────────────────────
+// ── Forma de pagamento dinâmica ────────────────────────────────
 function atualizarCamposPagamento(forma) {
-  const div = document.getElementById('camposPagamento');
+  var div = document.getElementById('camposPagamento');
   if (!div) return;
   if (!forma || ['Cartão de Crédito','Cartão de Débito','Dinheiro','Cheque','Débito Automático'].includes(forma)) {
-    div.style.display = 'none'; div.innerHTML = ''; return;
+    div.style.display='none'; div.innerHTML=''; return;
   }
   div.style.display = 'block';
   if (forma === 'Boleto Bancário') {
-    div.innerHTML = `
-      <div class="field" style="margin-top:4px">
-        <label>Linha Digitável do Boleto</label>
-        <input type="text" id="linhaDigitavel" placeholder="Cole a linha digitável — preenche valor e vencimento automaticamente" oninput="simularBoleto(this.value)">
-        <div class="field-hint">Ao preencher, valor e vencimento são extraídos automaticamente.</div>
-      </div>`;
+    div.innerHTML = '<div class="field" style="margin-top:4px">'
+      + '<label>Linha Digitável do Boleto</label>'
+      + '<input type="text" id="linhaDigitavel" placeholder="Cole a linha digitável — preenche valor e vencimento automaticamente" oninput="simularBoleto(this.value)">'
+      + '<div class="field-hint">Ao preencher, valor e vencimento são extraídos automaticamente.</div>'
+      + '</div>';
   } else if (forma === 'PIX') {
-    div.innerHTML = `
-      <div class="form-grid g2" style="margin-top:4px">
-        <div class="field">
-          <label>Tipo de Chave PIX <span class="req">*</span></label>
-          <select id="tipoChavePix" onchange="atualizarPlaceholderPix(this.value)">
-            <option value="">Selecione...</option>
-            <option value="CPF">CPF</option>
-            <option value="CNPJ">CNPJ</option>
-            <option value="TELEFONE">Telefone</option>
-            <option value="EMAIL">E-mail</option>
-            <option value="ALEATORIA">Chave Aleatória</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Chave PIX <span class="req">*</span></label>
-          <input type="text" id="chavePix" placeholder="Selecione o tipo primeiro">
-        </div>
-      </div>`;
+    div.innerHTML = '<div class="form-grid g2" style="margin-top:4px">'
+      + '<div class="field"><label>Tipo de Chave PIX <span class="req">*</span></label>'
+      + '<select id="tipoChavePix" onchange="atualizarPlaceholderPix(this.value)">'
+      + '<option value="">Selecione...</option>'
+      + '<option value="CPF">CPF</option><option value="CNPJ">CNPJ</option>'
+      + '<option value="TELEFONE">Telefone</option><option value="EMAIL">E-mail</option>'
+      + '<option value="ALEATORIA">Chave Aleatória</option>'
+      + '</select></div>'
+      + '<div class="field"><label>Chave PIX <span class="req">*</span></label>'
+      + '<input type="text" id="chavePix" placeholder="Selecione o tipo primeiro">'
+      + '</div></div>';
   } else if (['Transferência','Débito em Conta'].includes(forma)) {
-    div.innerHTML = `
-      <div class="form-grid g3" style="margin-top:4px">
-        <div class="field">
-          <label>Banco <span class="req">*</span></label>
-          <input type="text" id="bancoDest" placeholder="Ex: 341 - Itaú">
-        </div>
-        <div class="field">
-          <label>Agência <span class="req">*</span></label>
-          <input type="text" id="agenciaDest" placeholder="0000">
-        </div>
-        <div class="field">
-          <label>Número da Conta <span class="req">*</span></label>
-          <input type="text" id="contaDest" placeholder="00000-0">
-        </div>
-      </div>`;
+    div.innerHTML = '<div class="form-grid g3" style="margin-top:4px">'
+      + '<div class="field"><label>Banco <span class="req">*</span></label>'
+      + '<input type="text" id="bancoDest" placeholder="Ex: 341 - Itaú"></div>'
+      + '<div class="field"><label>Agência <span class="req">*</span></label>'
+      + '<input type="text" id="agenciaDest" placeholder="0000"></div>'
+      + '<div class="field"><label>Número da Conta <span class="req">*</span></label>'
+      + '<input type="text" id="contaDest" placeholder="00000-0"></div>'
+      + '</div>';
   }
 }
-
 function atualizarPlaceholderPix(tipo) {
-  const el = document.getElementById('chavePix');
-  if (!el) return;
-  const ph = {CPF:'000.000.000-00',CNPJ:'00.000.000/0000-00',TELEFONE:'+55 (00) 00000-0000',EMAIL:'email@exemplo.com',ALEATORIA:'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'};
-  el.placeholder = ph[tipo] || 'Informe a chave PIX';
-  el.value = '';
-  el.focus();
+  var el = document.getElementById('chavePix'); if (!el) return;
+  var ph = {CPF:'000.000.000-00',CNPJ:'00.000.000/0000-00',TELEFONE:'+55 (00) 00000-0000',EMAIL:'email@exemplo.com',ALEATORIA:'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'};
+  el.placeholder = ph[tipo] || 'Informe a chave PIX'; el.value=''; el.focus();
 }
 
-// ── Rateio e Parcelamento ──────────────────────────────────────────────────
+// ── Toggle Rateio ──────────────────────────────────────────────
 function toggleRateio(val) {
-  const div = document.getElementById('divQtdRateio');
+  var div = document.getElementById('divQtdRateio');
   if (!div) return;
   if (val === 'SIM') {
     div.style.display = 'block';
-    const sel = document.getElementById('rateioSel');
-    if (sel) sel.value = '';
-    document.getElementById('rateioContainer').innerHTML = '';
+    var sel = document.getElementById('rateioSel'); if (sel) sel.value='';
+    document.getElementById('rateioContainer').innerHTML='';
   } else {
     div.style.display = 'none';
     gerarRateio();
   }
 }
-
+// ── Toggle Parcelado ───────────────────────────────────────────
 function toggleParcelado(val) {
-  const div = document.getElementById('divQtdParcelas');
-  const container = document.getElementById('parcelasContainer');
+  var div = document.getElementById('divQtdParcelas');
+  var container = document.getElementById('parcelasContainer');
   if (!div) return;
   if (val === 'SIM') {
     div.style.display = 'block';
-    const sel = document.getElementById('parcelasSel');
-    if (sel) sel.value = '';
-    if (container) { container.innerHTML = ''; container.style.display = 'none'; }
+    var sel = document.getElementById('parcelasSel'); if (sel) sel.value='';
+    if (container) { container.innerHTML=''; container.style.display='none'; }
   } else {
     div.style.display = 'none';
-    if (container) { container.innerHTML = ''; container.style.display = 'none'; }
+    if (container) { container.innerHTML=''; container.style.display='none'; }
   }
 }
 
+// ── Gerar parcelas ─────────────────────────────────────────────
 function gerarParcelas() {
-  const n = parseInt(document.getElementById('parcelasSel')?.value);
-  if (!n) return;
-  const container = document.getElementById('parcelasContainer');
+  var n = parseInt(document.getElementById('parcelasSel')?.value); if (!n) return;
+  var container = document.getElementById('parcelasContainer');
   container.style.display = 'block';
-  let html = '';
-  for (let i = 1; i <= n; i++) {
-    html += `<div class="rateio-item" style="margin-bottom:10px">
-      <div class="rateio-item-title"><div class="rateio-num">${i}</div>Parcela ${i}</div>
-      <div class="form-grid g2">
-        <div class="field"><label>Vencimento <span class="req">*</span></label><input type="date" name="parcela_venc_${i}"></div>
-        <div class="field"><label>Valor (R$) <span class="req">*</span></label><input type="number" step="0.01" min="0" placeholder="0,00" name="parcela_valor_${i}"></div>
-      </div>
-    </div>`;
+  var html = '<div style="font-size:12px;font-weight:600;color:var(--pjd-700);margin-bottom:12px;padding:10px 14px;background:var(--pjd-100);border-radius:8px;display:flex;align-items:center;gap:8px">'
+    + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--pjd-700)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'
+    + 'Parcelas — ' + n + ' vencimento' + (n>1?'s':'')
+    + '</div>';
+  for (var i = 1; i <= n; i++) {
+    html += '<div class="rateio-item" style="margin-bottom:10px">'
+      + '<div class="rateio-item-title"><div class="rateio-num">'+i+'</div>Parcela '+i+'</div>'
+      + '<div class="form-grid g2">'
+      + '<div class="field"><label>Vencimento <span class="req">*</span></label>'
+      + '<input type="date" name="parcela_venc_'+i+'" id="parcela_venc_'+i+'"></div>'
+      + '<div class="field"><label>Valor (R$) <span class="req">*</span></label>'
+      + '<input type="text" name="parcela_valor_'+i+'" id="parcela_valor_'+i+'"'
+      + ' inputmode="numeric" placeholder="0,00" oninput="mascaraMoeda(this)"></div>'
+      + '</div></div>';
   }
   container.innerHTML = html;
 }
 
-// CCs por filial
-const ccPorFilial = {
+// ── CCs por filial ─────────────────────────────────────────────
+var ccPorFilial = {
   'Matriz /0001': ['Sedes','Corporativo','Administrativo','Transporte|Franca','Transporte|Limeira','Imóveis'],
   'Bela Mansão /0002': ['Sedes','Corporativo','Administrativo','Café SG','Café PL','Café SF','Soja','Gado','SMB','Tia Luiza'],
   'São Gregório /0003': ['Sedes','Corporativo','Administrativo','Café SG','Café PL','Café SF','Soja','Gado','SMB','Tia Luiza'],
   'Palestina 1 /0004': ['Sedes','Corporativo','Administrativo','Imóveis','Café SG','Café PL','Café SF','Soja','Gado','SMB'],
   'Santa Fé /0005': ['Sedes','Corporativo','Administrativo','Café SG','Café PL','Café SF','Soja','Gado','SMB','Tia Luiza'],
 };
-
 function atualizarCCs() {
-  const filial = document.getElementById('filialSelect')?.value;
-  const ccs = ccPorFilial[filial] || [];
-  gerarRateio(ccs);
+  var filial = document.getElementById('filialSelect')?.value;
+  gerarRateio(ccPorFilial[filial] || []);
 }
 
+// ── Gerar rateio ───────────────────────────────────────────────
 function gerarRateio(ccs) {
-  const simNao = document.getElementById('rateioSimNao');
-  const n = (simNao && simNao.value === 'NAO') ? 1 : parseInt(document.getElementById('rateioSel')?.value || 1) || 1;
-  const filial = document.getElementById('filialSelect')?.value;
-  const listaCC = ccs || ccPorFilial[filial] || ['Sedes','Corporativo','Administrativo'];
-  const opsCCs = listaCC.map(cc => `<option value="${cc}">${cc}</option>`).join('');
-  const container = document.getElementById('rateioContainer');
-  if (!container) return;
-  let html = '';
-  for (let i = 1; i <= n; i++) {
-    html += `<div class="rateio-item">
-      <div class="rateio-item-title"><div class="rateio-num">${i}</div>Conta ${i}</div>
-      <div class="form-grid g3">
-        <div class="field" style="grid-column:span 2">
-          <label>Conta Financeira <span class="req">*</span></label>
-          <input type="text" list="listaContas" placeholder="Digite para buscar...">
-        </div>
-        <div class="field">
-          <label>Centro de Custo <span class="req">*</span></label>
-          <select><option value="">Selecione...</option>${opsCCs}</select>
-        </div>
-      </div>
-    </div>`;
+  var simNao = document.getElementById('rateioSimNao');
+  var n = (simNao && simNao.value === 'NAO') ? 1 : parseInt(document.getElementById('rateioSel')?.value || '1') || 1;
+  var filial = document.getElementById('filialSelect')?.value;
+  var listaCC = ccs || ccPorFilial[filial] || ['Sedes','Corporativo','Administrativo'];
+  var opsCCs = listaCC.map(function(cc){ return '<option value="'+cc+'">'+cc+'</option>'; }).join('');
+  var container = document.getElementById('rateioContainer'); if (!container) return;
+
+  var header = '<div style="font-size:12px;font-weight:600;color:var(--pjd-700);margin-bottom:12px;padding:10px 14px;background:var(--pjd-100);border-radius:8px;display:flex;align-items:center;gap:8px">'
+    + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--pjd-700)" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>'
+    + 'Rateio — ' + n + ' conta' + (n>1?'s':'')
+    + '</div>';
+
+  var html = n > 1 ? header : '';
+  for (var i = 1; i <= n; i++) {
+    html += '<div class="rateio-item" style="margin-bottom:12px">'
+      + '<div class="rateio-item-title"><div class="rateio-num">'+i+'</div>Conta '+i+'</div>'
+      + '<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px">'
+      + '<div class="field"><label>Conta Financeira <span class="req">*</span></label>'
+      + criarCampoConta('contaInput_'+i, 'contaLista_'+i)
+      + '</div>'
+      + '<div class="field"><label>Centro de Custo <span class="req">*</span></label>'
+      + '<select id="ccSelect_'+i+'"><option value="">Selecione...</option>'+opsCCs+'</select>'
+      + '</div>'
+      + '<div class="field"><label>Valor (R$) <span class="req">*</span></label>'
+      + '<input type="text" id="valorRateio_'+i+'" inputmode="numeric" placeholder="0,00" oninput="mascaraMoeda(this)">'
+      + '</div>'
+      + '</div></div>';
   }
   container.innerHTML = html;
 }
 
-// ── Boleto ─────────────────────────────────────────────────────────────────
-let boletoTimer;
+// ── Boleto ─────────────────────────────────────────────────────
+var boletoTimer;
 function simularBoleto(val) {
   clearTimeout(boletoTimer);
   if (val.replace(/\D/g,'').length < 30) return;
-  boletoTimer = setTimeout(() => {
-    const vb = document.getElementById('vBruto');
-    if (vb) { vb.value = '0.00'; calcLiquido(); }
+  boletoTimer = setTimeout(function() {
     toast('Boleto processado','Informe o valor manualmente.','info');
   }, 800);
 }
-
-// ── Beneficiário diferente ─────────────────────────────────────────────────
 function toggleBenef(v) {
-  const div = document.getElementById('divBenef');
+  var div = document.getElementById('divBenef');
   if (div) div.style.display = v === 'NÃO' ? 'block' : 'none';
 }
 
-// ── Modal de aprovação ─────────────────────────────────────────────────────
+// ── Modal aprovação ────────────────────────────────────────────
 function abrirModal(id, chamado, forn, valor) {
   document.getElementById('modalChamado').textContent = chamado;
   document.getElementById('modalForn').textContent = forn;
-  document.getElementById('modalValor').textContent = valor.startsWith('R$') ? valor : 'R$ ' + valor;
-  const bd = document.getElementById('modalBackdrop');
-  bd.classList.add('open');
-  bd.dataset.id = id;
-  bd.dataset.chamado = chamado;
+  document.getElementById('modalValor').textContent = String(valor).startsWith('R$') ? valor : 'R$ '+valor;
+  var bd = document.getElementById('modalBackdrop');
+  bd.classList.add('open'); bd.dataset.id=id; bd.dataset.chamado=chamado;
 }
 function fecharModal() { document.getElementById('modalBackdrop').classList.remove('open'); }
 function confirmarAprovacao() {
-  const bd = document.getElementById('modalBackdrop');
-  const id = bd.dataset.id, numero = bd.dataset.chamado;
+  var bd = document.getElementById('modalBackdrop');
+  var id = bd.dataset.id, numero = bd.dataset.chamado;
   fecharModal();
   if (id && SCRIPT_URL) {
-    fetch(SCRIPT_URL, {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    fetch(SCRIPT_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
       body:'acao=aprovar&tipo=cp&id='+encodeURIComponent(id)+'&numero='+encodeURIComponent(numero)})
-    .then(r=>r.json()).then(d=>{
-      if (d.ok) { toast('Aprovação confirmada', d.novoStatus || 'Aprovado.','success'); setTimeout(()=>location.reload(),2000); }
+    .then(function(r){return r.json();}).then(function(d){
+      if (d.ok){toast('Aprovação confirmada',d.novoStatus||'Aprovado.','success');setTimeout(function(){location.reload();},2000);}
       else alert('Erro: '+d.msg);
     });
-  } else { toast('Aprovação confirmada','Lançamento aprovado.','success'); }
+  } else { toast('Aprovação confirmada','Aprovado.','success'); }
 }
-document.addEventListener('DOMContentLoaded', () => {
-  const bd = document.getElementById('modalBackdrop');
-  if (bd) bd.addEventListener('click', e => { if (e.target === e.currentTarget) fecharModal(); });
+document.addEventListener('DOMContentLoaded', function() {
+  var bd = document.getElementById('modalBackdrop');
+  if (bd) bd.addEventListener('click', function(e){ if(e.target===e.currentTarget) fecharModal(); });
 });
 
-// ── Modal de rejeição ──────────────────────────────────────────────────────
-let _rejId = null, _rejNumero = null;
-function abrirModalRejeicao(id, numero) {
-  _rejId = id; _rejNumero = numero;
-  document.getElementById('rejNumero').textContent = numero;
-  document.getElementById('motivoRejeicao').value = '';
-  document.getElementById('modalRejeicao').classList.add('open');
-}
-function fecharModalRejeicao() { document.getElementById('modalRejeicao').classList.remove('open'); }
-function confirmarRejeicao() {
-  const motivo = document.getElementById('motivoRejeicao').value.trim();
-  if (!motivo) { document.getElementById('motivoRejeicao').style.borderColor='var(--red)'; return; }
-  fetch(SCRIPT_URL, {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+// ── Modal rejeição ─────────────────────────────────────────────
+var _rejId=null, _rejNumero=null;
+function abrirModalRejeicao(id,numero){ _rejId=id; _rejNumero=numero; document.getElementById('rejNumero').textContent=numero; document.getElementById('motivoRejeicao').value=''; document.getElementById('modalRejeicao').classList.add('open'); }
+function fecharModalRejeicao(){ document.getElementById('modalRejeicao').classList.remove('open'); }
+function confirmarRejeicao(){
+  var motivo=document.getElementById('motivoRejeicao').value.trim();
+  if(!motivo){document.getElementById('motivoRejeicao').style.borderColor='var(--red)';return;}
+  fetch(SCRIPT_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
     body:'acao=rejeitar&tipo=cp&id='+encodeURIComponent(_rejId)+'&numero='+encodeURIComponent(_rejNumero)+'&motivo='+encodeURIComponent(motivo)})
-  .then(r=>r.json()).then(d=>{
+  .then(function(r){return r.json();}).then(function(d){
     fecharModalRejeicao();
-    if (d.ok) { toast('Rejeitado','Solicitante notificado.','error'); setTimeout(()=>location.reload(),2000); }
+    if(d.ok){toast('Rejeitado','Solicitante notificado.','error');setTimeout(function(){location.reload();},2000);}
     else alert('Erro: '+d.msg);
   });
 }
 
-// ── Pré-visualização ───────────────────────────────────────────────────────
-const DEMO_CP = {
-  'CP2026-00001': {id:'1',numero:'CP2026-00001',fornecedor_nome:'Bolsa Agronegocios Representações',tipo_documento:'NF-e',numero_nf:'85028',dt_emissao:'2026-05-20',dt_vencimento:'2026-05-27',forma_pagamento:'Boleto Bancário',valor_bruto:3998,acrescimos:0,descontos:0,valor_liquido:3998,finalidade:'Serviços agrícolas 05/2026',observacoes:'',status:'Aguard. Diretoria',criado_em:'2026-05-23T16:53:00',parcelado:false,rateio:false,cc_nome:'Café SG',conta_desc:'22310 · Consultorias - Agro'},
-  'CP2026-00002': {id:'2',numero:'CP2026-00002',fornecedor_nome:'MTG Administração e Assessoria SA',tipo_documento:'NF-e',numero_nf:'ABRIL/26',dt_emissao:'2026-05-01',dt_vencimento:'2026-05-29',forma_pagamento:'Boleto Bancário',valor_bruto:137.22,acrescimos:0,descontos:0,valor_liquido:137.22,finalidade:'Mensalidade sistema Abril/26',observacoes:'',status:'Aguard. Diretoria',criado_em:'2026-05-23T18:18:00',parcelado:false,rateio:false,cc_nome:'Administrativo',conta_desc:'21770 · Assinaturas e Mensalidades'},
+// ── Pré-visualização ───────────────────────────────────────────
+var DEMO_CP = {
+  'CP2026-00001':{id:'1',numero:'CP2026-00001',fornecedor_nome:'Bolsa Agronegocios Representações',tipo_documento:'NF-e',numero_nf:'85028',dt_emissao:'2026-05-20',dt_vencimento:'2026-05-27',forma_pagamento:'Boleto Bancário',valor_bruto:3998,acrescimos:0,descontos:0,valor_liquido:3998,finalidade:'Serviços agrícolas 05/2026',observacoes:'',status:'Aguard. Diretoria',criado_em:'2026-05-23T16:53:00',parcelado:false,rateio:false,cc_nome:'Café SG',conta_desc:'22310 · Consultorias - Agro'},
+  'CP2026-00002':{id:'2',numero:'CP2026-00002',fornecedor_nome:'MTG Administração e Assessoria SA',tipo_documento:'NF-e',numero_nf:'ABRIL/26',dt_emissao:'2026-05-01',dt_vencimento:'2026-05-29',forma_pagamento:'Boleto Bancário',valor_bruto:137.22,acrescimos:0,descontos:0,valor_liquido:137.22,finalidade:'Mensalidade sistema Abril/26',observacoes:'',status:'Aguard. Diretoria',criado_em:'2026-05-23T18:18:00',parcelado:false,rateio:false,cc_nome:'Administrativo',conta_desc:'21770 · Assinaturas e Mensalidades'},
 };
-function abrirPreviewDemo(numero) { const d = DEMO_CP[numero]; if (d) abrirPreview(d); }
-
-function abrirPreview(dados) {
-  document.getElementById('previewNumero').textContent = dados.numero || '';
-  document.getElementById('previewForn').textContent = dados.fornecedor_nome || '—';
-  const cor = {
-    'Aguard. Coordenação':'var(--amber)','Aguard. Diretoria':'var(--amber)',
-    'Aprovado':'var(--green)','Pago':'#0369a1','Rejeitado':'var(--red)','Rascunho':'var(--ink4)'
-  }[dados.status] || 'var(--ink3)';
-  const parcelasHtml = dados.rateio_itens ? '' : `
-    <div class="detail-section" style="margin-top:4px">
-      <div class="detail-section-title">Classificação</div>
-      <div class="detail-row"><span class="detail-label">Conta Financeira</span><span class="detail-value">${dados.conta_desc||'—'}</span></div>
-      <div class="detail-row"><span class="detail-label">Centro de Custo</span><span class="detail-value">${dados.cc_nome||'—'}</span></div>
-      <div class="detail-row"><span class="detail-label">Parcelado</span><span class="detail-value">${dados.parcelado?'Sim':'Não'}</span></div>
-      <div class="detail-row"><span class="detail-label">Rateio</span><span class="detail-value">${dados.rateio?'Sim':'Não'}</span></div>
-    </div>`;
-  document.getElementById('previewBody').innerHTML = `
+function abrirPreviewDemo(numero){ var d=DEMO_CP[numero]; if(d) abrirPreview(d); }
+function abrirPreview(dados){
+  document.getElementById('previewNumero').textContent=dados.numero||'';
+  document.getElementById('previewForn').textContent=dados.fornecedor_nome||'—';
+  var cor={'Aguard. Coordenação':'var(--amber)','Aguard. Diretoria':'var(--amber)','Aprovado':'var(--green)','Pago':'#0369a1','Rejeitado':'var(--red)','Rascunho':'var(--ink4)'}[dados.status]||'var(--ink3)';
+  var cls=`<div class="detail-section" style="margin-top:4px"><div class="detail-section-title">Classificação</div>
+    <div class="detail-row"><span class="detail-label">Conta Financeira</span><span class="detail-value">${dados.conta_desc||'—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Centro de Custo</span><span class="detail-value">${dados.cc_nome||'—'}</span></div>
+    <div class="detail-row"><span class="detail-label">Parcelado</span><span class="detail-value">${dados.parcelado?'Sim':'Não'}</span></div>
+    <div class="detail-row"><span class="detail-label">Rateio</span><span class="detail-value">${dados.rateio?'Sim':'Não'}</span></div>
+  </div>`;
+  document.getElementById('previewBody').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px">
-      <div><div class="detail-section">
-        <div class="detail-section-title">Documento</div>
+      <div><div class="detail-section"><div class="detail-section-title">Documento</div>
         <div class="detail-row"><span class="detail-label">Tipo</span><span class="detail-value">${dados.tipo_documento||'—'}</span></div>
-        <div class="detail-row"><span class="detail-label">N° NF/Doc</span><span class="detail-value mono">${dados.numero_nf||'—'}</span></div>
+        <div class="detail-row"><span class="detail-label">N° NF</span><span class="detail-value mono">${dados.numero_nf||'—'}</span></div>
         <div class="detail-row"><span class="detail-label">Emissão</span><span class="detail-value">${fmtData(dados.dt_emissao)}</span></div>
         <div class="detail-row"><span class="detail-label">Vencimento</span><span class="detail-value" style="color:${vencCor(dados.dt_vencimento)}">${fmtData(dados.dt_vencimento)}</span></div>
         <div class="detail-row"><span class="detail-label">Forma Pgto</span><span class="detail-value">${dados.forma_pagamento||'—'}</span></div>
       </div></div>
-      <div><div class="detail-section">
-        <div class="detail-section-title">Valores</div>
-        <div class="detail-row"><span class="detail-label">Valor Bruto</span><span class="detail-value">${fmtMoeda(dados.valor_bruto)}</span></div>
+      <div><div class="detail-section"><div class="detail-section-title">Valores</div>
+        <div class="detail-row"><span class="detail-label">Bruto</span><span class="detail-value">${fmtMoeda(dados.valor_bruto)}</span></div>
         <div class="detail-row"><span class="detail-label">Acréscimos</span><span class="detail-value">${fmtMoeda(dados.acrescimos)}</span></div>
         <div class="detail-row"><span class="detail-label">Descontos</span><span class="detail-value" style="color:var(--green)">- ${fmtMoeda(dados.descontos)}</span></div>
         <div class="detail-row" style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px">
@@ -1993,77 +2019,48 @@ function abrirPreview(dados) {
         </div>
       </div></div>
     </div>
-    ${parcelasHtml}
+    ${cls}
     ${dados.finalidade?`<div class="detail-section" style="margin-top:4px"><div class="detail-section-title">Finalidade / Histórico</div><div style="font-size:13px;color:var(--ink2)">${dados.finalidade}</div></div>`:''}
     ${dados.observacoes?`<div class="detail-section" style="margin-top:4px"><div class="detail-section-title">Observações</div><div style="font-size:13px;background:var(--surf2);padding:10px 12px;border-radius:8px;border:1px solid var(--border)">${dados.observacoes}</div></div>`:''}
-    ${dados.status==='Rejeitado'&&dados.motivo_rejeicao?`<div class="detail-section" style="margin-top:4px"><div class="detail-section-title" style="color:var(--red)">Motivo da Rejeição</div><div class="comment-box">${dados.motivo_rejeicao}</div></div>`:''}
     <div style="display:flex;align-items:center;gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid var(--surf3)">
       <span class="badge" style="background:${cor}15;color:${cor};border:1px solid ${cor}40">${dados.status}</span>
       <span style="font-size:12px;color:var(--ink4)">Lançado em ${fmtDataHora(dados.criado_em)}</span>
     </div>`;
-  const podeAprovar = (USUARIO.nivel==='Coordenação'&&dados.status==='Aguard. Coordenação')||(USUARIO.nivel==='Diretoria'&&dados.status==='Aguard. Diretoria')||USUARIO.nivel==='Admin';
-  document.getElementById('previewFooter').innerHTML = podeAprovar ? `
-    <button class="btn btn-ghost btn-sm" onclick="fecharPreview()">Fechar</button>
-    <button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:1px solid #fca5a5" onclick="fecharPreview();abrirModalRejeicao('${dados.id}','${dados.numero}')">Rejeitar</button>
-    <button class="btn btn-primary btn-sm" onclick="fecharPreview();abrirModal('${dados.id}','${dados.numero}','${(dados.fornecedor_nome||'').replace(/'/g,"\'")}','${fmtMoeda(dados.valor_liquido)}')">Aprovar</button>`
-    : `<button class="btn btn-ghost btn-sm" onclick="fecharPreview()">Fechar</button>`;
+  var podeAprovar=(USUARIO.nivel==='Coordenação'&&dados.status==='Aguard. Coordenação')||(USUARIO.nivel==='Diretoria'&&dados.status==='Aguard. Diretoria')||USUARIO.nivel==='Admin';
+  document.getElementById('previewFooter').innerHTML=podeAprovar
+    ?`<button class="btn btn-ghost btn-sm" onclick="fecharPreview()">Fechar</button>
+      <button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:1px solid #fca5a5" onclick="fecharPreview();abrirModalRejeicao('${dados.id}','${dados.numero}')">Rejeitar</button>
+      <button class="btn btn-primary btn-sm" onclick="fecharPreview();abrirModal('${dados.id}','${dados.numero}','${(dados.fornecedor_nome||'').replace(/'/g,"\\'")}','${fmtMoeda(dados.valor_liquido)}')">Aprovar</button>`
+    :`<button class="btn btn-ghost btn-sm" onclick="fecharPreview()">Fechar</button>`;
   document.getElementById('modalPreview').classList.add('open');
 }
-function fecharPreview() { document.getElementById('modalPreview').classList.remove('open'); }
+function fecharPreview(){ document.getElementById('modalPreview').classList.remove('open'); }
+function fecharDrawer(){ document.getElementById('drawer').style.right='-560px'; document.getElementById('drawerBackdrop').style.display='none'; }
+function solicitarPagamento(){ toast('Pagamento solicitado','Enviado para aprovação.','success'); setTimeout(function(){showPage('cp');},1800); }
 
-// ── Drawer ─────────────────────────────────────────────────────────────────
-function fecharDrawer() {
-  document.getElementById('drawer').style.right = '-560px';
-  document.getElementById('drawerBackdrop').style.display = 'none';
-}
+// ── Formatadores ───────────────────────────────────────────────
+function fmtMoeda(v){ if(!v&&v!==0)return '—'; return 'R$ '+parseFloat(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtData(d){ if(!d)return '—'; return new Date(d+'T12:00:00').toLocaleDateString('pt-BR'); }
+function fmtDataHora(d){ if(!d)return '—'; var dt=new Date(d); return dt.toLocaleDateString('pt-BR')+' · '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }
+function vencCor(d){ if(!d)return 'var(--ink3)'; var hoje=new Date(); hoje.setHours(0,0,0,0); var dt=new Date(d+'T12:00:00'); if(dt<hoje)return 'var(--red)'; if(dt.getTime()===hoje.getTime())return 'var(--amber)'; return 'var(--ink3)'; }
 
-// ── Solicitar Pagamento ────────────────────────────────────────────────────
-function solicitarPagamento() {
-  toast('Pagamento solicitado','Enviado para aprovação da Coordenação.','success');
-  setTimeout(() => showPage('cp'), 1800);
-}
-
-// ── Formatadores ───────────────────────────────────────────────────────────
-function fmtMoeda(v) {
-  if (!v && v !== 0) return '—';
-  return 'R$ ' + parseFloat(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
-}
-function fmtData(d) {
-  if (!d) return '—';
-  return new Date(d+'T12:00:00').toLocaleDateString('pt-BR');
-}
-function fmtDataHora(d) {
-  if (!d) return '—';
-  const dt = new Date(d);
-  return dt.toLocaleDateString('pt-BR') + ' · ' + dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-}
-function vencCor(d) {
-  if (!d) return 'var(--ink3)';
-  const hoje = new Date(); hoje.setHours(0,0,0,0);
-  const dt = new Date(d+'T12:00:00');
-  if (dt < hoje) return 'var(--red)';
-  if (dt.getTime()===hoje.getTime()) return 'var(--amber)';
-  return 'var(--ink3)';
-}
-
-// ── Toast ──────────────────────────────────────────────────────────────────
-function toast(titulo, msg, tipo='info') {
-  const container = document.getElementById('toastContainer');
-  if (!container) return;
-  const el = document.createElement('div');
-  const cor = tipo==='success'?'#0d9e6e':tipo==='error'?'#c53030':'#2277e0';
-  el.className = 'toast';
-  el.innerHTML = `<div class="toast-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${cor}" stroke-width="2.5">
-    ${tipo==='success'?'<polyline points="20,6 9,17 4,12"/>':`<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>`}
-    </svg></div><div class="toast-text"><div class="tt">${titulo}</div><div class="ts">${msg}</div></div>`;
+// ── Toast ──────────────────────────────────────────────────────
+function toast(titulo,msg,tipo){
+  tipo=tipo||'info';
+  var container=document.getElementById('toastContainer'); if(!container)return;
+  var el=document.createElement('div'); el.className='toast';
+  var cor=tipo==='success'?'#0d9e6e':tipo==='error'?'#c53030':'#2277e0';
+  el.innerHTML='<div class="toast-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="'+cor+'" stroke-width="2.5">'+(tipo==='success'?'<polyline points="20,6 9,17 4,12"/>':`<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>`)+'</svg></div><div class="toast-text"><div class="tt">'+titulo+'</div><div class="ts">'+msg+'</div></div>';
   container.appendChild(el);
-  setTimeout(()=>{el.style.opacity='0';el.style.transform='translateY(8px)';el.style.transition='.3s';setTimeout(()=>el.remove(),300);},4000);
+  setTimeout(function(){el.style.opacity='0';el.style.transform='translateY(8px)';el.style.transition='.3s';setTimeout(function(){el.remove();},300);},4000);
 }
 
-// ── Init ───────────────────────────────────────────────────────────────────
+// ── Init ───────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
   initUsuario();
-  carregarDados().then(() => { if (typeof atualizarCCs==='function') atualizarCCs(); });
+  carregarDados().then(function(){ if(typeof atualizarCCs==='function') atualizarCCs(); });
+  // Máscara monetária nos campos fixos
+  ['vBruto','vAcres','vDesc'].forEach(function(id){ aplicarMascaraMoeda(document.getElementById(id)); });
 });
 
 </script>
