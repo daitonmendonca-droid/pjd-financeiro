@@ -13,6 +13,7 @@
 
 
 
+
 :root {
   --pjd-900: #0a2240;
   --pjd-800: #0e3060;
@@ -504,6 +505,7 @@ svg { display: block; }
   .dashboard-grid { grid-template-columns: 1fr; }
   .g4 { grid-template-columns: 1fr 1fr; }
 }
+
 
 
 
@@ -1708,26 +1710,37 @@ function calcLiquido() {
 
 // ── Busca de conta financeira com lista suspensa ───────────────
 function criarCampoConta(inputId, listId) {
+  // A lista é adicionada ao body para escapar de qualquer overflow
   return '<div style="position:relative">'
     + '<input type="text" id="'+inputId+'" autocomplete="off"'
     + ' placeholder="Código ou nome da conta..." style="width:100%"'
     + ' oninput="filtrarContas(\''+inputId+'\',\''+listId+'\')"'
-    + ' onfocus="posicionarListaConta(\''+inputId+'\',\''+listId+'\');filtrarContas(\''+inputId+'\',\''+listId+'\')"'
+    + ' onfocus="filtrarContas(\''+inputId+'\',\''+listId+'\')"'
     + ' onblur="setTimeout(function(){fecharListaConta(\''+listId+'\')},200)">'
-    + '<div id="'+listId+'" style="display:none;position:fixed;z-index:99999;'
-    + 'background:#fff;border:1px solid #dde3ef;border-radius:8px;'
-    + 'box-shadow:0 12px 40px rgba(10,34,64,.18);max-height:260px;overflow-y:auto;min-width:400px"></div>'
     + '</div>';
+}
+
+function garantirListaConta(inputId, listId) {
+  var lista = document.getElementById(listId);
+  if (!lista) {
+    lista = document.createElement('div');
+    lista.id = listId;
+    lista.style.cssText = 'display:none;position:fixed;z-index:99999;'
+      + 'background:#fff;border:1px solid #dde3ef;border-radius:8px;'
+      + 'box-shadow:0 8px 32px rgba(10,34,64,.18);max-height:260px;overflow-y:auto;';
+    document.body.appendChild(lista);
+  }
+  return lista;
 }
 
 function posicionarListaConta(inputId, listId) {
   var input = document.getElementById(inputId);
-  var lista = document.getElementById(listId);
-  if (!input || !lista) return;
+  var lista = garantirListaConta(inputId, listId);
+  if (!input) return;
   var rect = input.getBoundingClientRect();
   lista.style.top   = (rect.bottom + 4) + 'px';
   lista.style.left  = rect.left + 'px';
-  lista.style.width = Math.max(rect.width, 420) + 'px';
+  lista.style.width = Math.max(rect.width, 380) + 'px';
 }
 
 function filtrarContas(inputId, listId) {
@@ -1772,7 +1785,7 @@ async function buscarContasSupabase(q, inputId, listId) {
 }
 
 function renderListaContas(contas, inputId, listId) {
-  var lista = document.getElementById(listId);
+  var lista = garantirListaConta(inputId, listId);
   if (!lista) return;
   if (!contas.length) { lista.style.display='none'; return; }
   posicionarListaConta(inputId, listId);
