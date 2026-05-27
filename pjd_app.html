@@ -9,6 +9,7 @@
 
 
 
+
 :root {
   --pjd-900: #0a2240;
   --pjd-800: #0e3060;
@@ -500,6 +501,7 @@ svg { display: block; }
   .dashboard-grid { grid-template-columns: 1fr; }
   .g4 { grid-template-columns: 1fr 1fr; }
 }
+
 
 
 
@@ -1712,31 +1714,82 @@ function criarCampoConta(inputId, listId) {
     + '</div>';
 }
 function filtrarContas(inputId, listId) {
-  const input = document.getElementById(inputId);
-  const lista = document.getElementById(listId);
-  if (!input || !lista || !CONTAS.length) return;
-  const q = input.value.toLowerCase().trim();
-  const filtrados = q
-    ? CONTAS.filter(function(c){ return c.descricao.toLowerCase().includes(q) || (c.conta_red && c.conta_red.includes(q)); }).slice(0,15)
-    : CONTAS.slice(0,15);
-  if (!filtrados.length) { lista.style.display='none'; return; }
+  var input = document.getElementById(inputId);
+  var lista = document.getElementById(listId);
+  if (!input || !lista) return;
+  var q = input.value.trim();
+
+  // Só busca a partir do 1º caractere
+  if (!q) { lista.style.display='none'; return; }
+
+  // Se CONTAS ainda não carregou, busca direto no Supabase
+  if (!CONTAS.length) {
+    buscarContasSupabase(q, inputId, listId);
+    return;
+  }
+
+  var ql = q.toLowerCase();
+  var filtrados = CONTAS.filter(function(c) {
+    return c.descricao.toLowerCase().includes(ql) || (c.conta_red && c.conta_red.startsWith(q));
+  }).slice(0, 15);
+
+  renderListaContas(filtrados, inputId, listId);
+}
+
+async function buscarContasSupabase(q, inputId, listId) {
+  if (!SB_URL || !SB_KEY) return;
+  try {
+    var h = {'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY};
+    var url = SB_URL + '/rest/v1/plano_contas?tipo=eq.A&or=(descricao.ilike.*' + encodeURIComponent(q) + '*,conta_red.ilike.' + encodeURIComponent(q) + '*)&order=conta_red&limit=15';
+    var res = await fetch(url, {headers: h});
+    var dados = await res.json();
+    if (Array.isArray(dados) && dados.length) {
+      // Atualiza cache se vazio
+      if (!CONTAS.length) CONTAS = dados;
+      renderListaContas(dados, inputId, listId);
+    } else {
+      var lista = document.getElementById(listId);
+      if (lista) lista.style.display = 'none';
+    }
+  } catch(e) { console.error('Erro busca contas:', e); }
+}
+
+function renderListaContas(contas, inputId, listId) {
+  var lista = document.getElementById(listId);
+  if (!lista) return;
+  if (!contas.length) { lista.style.display='none'; return; }
   lista.style.display = 'block';
-  lista.innerHTML = filtrados.map(function(c) {
-    var label = (c.conta_red ? c.conta_red + ' · ' : '') + c.descricao;
-    var labelEsc = label.replace(/'/g,"\\'");
-    return '<div onclick="selecionarConta(\''+inputId+'\',\''+listId+'\','+c.id+',\''+labelEsc+'\')"'
-      + ' style="padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--surf3);display:flex;gap:10px;align-items:center"'
-      + ' onmouseover="this.style.background=\'var(--pjd-50)\'" onmouseout="this.style.background=\'\'">'
-      + (c.conta_red ? '<span style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--pjd-700);background:var(--pjd-100);padding:2px 6px;border-radius:4px;flex-shrink:0">'+c.conta_red+'</span>' : '')
-      + '<span>'+c.descricao+'</span>'
+  lista.innerHTML = contas.map(function(c) {
+    var contaRed = c.conta_red || '';
+    var descricao = c.descricao || '';
+    var setor = c.setor || '';
+    var labelEsc = (contaRed ? contaRed + ' · ' : '') + descricao;
+    labelEsc = labelEsc.replace(/'/g, "\'");
+    return '<div onclick="selecionarConta(\''+inputId+'\',\''+listId+'\','+c.id+',\''+labelEsc+'\',\''+contaRed.replace(/'/g,"\'")+'\',' +'\'' +descricao.replace(/'/g,"\'")+'\',' +'\'' +setor.replace(/'/g,"\'")+'\')"'
+      + ' style="padding:10px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--surf3)"'
+      + ' onmouseover="this.style.background=\'var(--pjd-50)\'" onmouseout="this.style.background=\'\'">  '
+      + '<div style="display:flex;align-items:center;gap:8px">'
+      + (contaRed ? '<span style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--pjd-700);background:var(--pjd-100);padding:2px 6px;border-radius:4px;flex-shrink:0">' + contaRed + '</span>' : '')
+      + '<span style="font-weight:500">' + descricao + '</span>'
+      + '</div>'
+      + (setor ? '<div style="font-size:11px;color:var(--ink4);margin-top:2px;margin-left:'+(contaRed?'50px':'0')+'">' + setor + '</div>' : '')
       + '</div>';
   }).join('');
 }
-function selecionarConta(inputId, listId, contaId, label) {
+
+function selecionarConta(inputId, listId, contaId, label, contaRed, descricao, setor) {
   var input = document.getElementById(inputId);
-  if (input) { input.value = label; input.dataset.contaId = contaId; }
+  if (input) {
+    // Exibe: código · descrição
+    input.value = label;
+    input.dataset.contaId  = contaId;
+    input.dataset.contaRed = contaRed;
+    input.dataset.descricao = descricao;
+    input.dataset.setor    = setor;
+  }
   fecharListaConta(listId);
 }
+
 function fecharListaConta(listId) {
   var lista = document.getElementById(listId);
   if (lista) lista.style.display = 'none';
