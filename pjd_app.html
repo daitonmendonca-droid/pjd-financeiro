@@ -11,6 +11,7 @@
 
 
 
+
 :root {
   --pjd-900: #0a2240;
   --pjd-800: #0e3060;
@@ -319,7 +320,7 @@ tbody tr:last-child td { border-bottom: none; }
 .form-page.visible { display: block; }
 .form-card {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm); overflow: hidden; margin-bottom: 20px;
+  box-shadow: var(--shadow-sm); overflow: visible; margin-bottom: 20px;
 }
 .form-card-header {
   padding: 16px 24px; border-bottom: 1px solid var(--border);
@@ -366,7 +367,7 @@ tbody tr:last-child td { border-bottom: none; }
 /* Rateio dinâmico */
 .rateio-item {
   background: var(--surf2); border: 1px solid var(--border); border-radius: 10px;
-  padding: 16px; margin-bottom: 10px; position: relative;
+  padding: 16px; margin-bottom: 10px; position: relative; overflow: visible;
 }
 .rateio-item-title {
   font-size: 12px; font-weight: 600; color: var(--pjd-700);
@@ -502,6 +503,7 @@ svg { display: block; }
   .dashboard-grid { grid-template-columns: 1fr; }
   .g4 { grid-template-columns: 1fr 1fr; }
 }
+
 
 
 
@@ -1710,7 +1712,7 @@ function criarCampoConta(inputId, listId) {
     + ' oninput="filtrarContas(\''+inputId+'\',\''+listId+'\')"'
     + ' onfocus="filtrarContas(\''+inputId+'\',\''+listId+'\')"'
     + ' onblur="setTimeout(function(){fecharListaConta(\''+listId+'\')},200)">'
-    + '<div id="'+listId+'" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:300;'
+    + '<div id="'+listId+'" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:9999;'
     + 'background:var(--surface);border:1px solid var(--border);border-radius:8px;'
     + 'box-shadow:var(--shadow-lg);max-height:220px;overflow-y:auto;margin-top:4px"></div>'
     + '</div>';
