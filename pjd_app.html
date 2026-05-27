@@ -10,6 +10,7 @@
 
 
 
+
 :root {
   --pjd-900: #0a2240;
   --pjd-800: #0e3060;
@@ -501,6 +502,7 @@ svg { display: block; }
   .dashboard-grid { grid-template-columns: 1fr; }
   .g4 { grid-template-columns: 1fr 1fr; }
 }
+
 
 
 
@@ -1740,7 +1742,7 @@ async function buscarContasSupabase(q, inputId, listId) {
   if (!SB_URL || !SB_KEY) return;
   try {
     var h = {'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY};
-    var url = SB_URL + '/rest/v1/plano_contas?tipo=eq.A&or=(descricao.ilike.*' + encodeURIComponent(q) + '*,conta_red.ilike.' + encodeURIComponent(q) + '*)&order=conta_red&limit=15';
+    var url = SB_URL + '/rest/v1/plano_contas?tipo=eq.A&or=(descricao.ilike.*' + encodeURIComponent(q) + '*,conta_red.ilike.*' + encodeURIComponent(q) + '*)&order=conta_red&limit=15';
     var res = await fetch(url, {headers: h});
     var dados = await res.json();
     if (Array.isArray(dados) && dados.length) {
